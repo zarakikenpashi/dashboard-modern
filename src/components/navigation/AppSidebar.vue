@@ -15,10 +15,7 @@ const router = useRouter()
 const nav = [
   {
     section: 'Principal',
-    items: [
-      { label: 'Tableau de bord', to: '/app/dashboard', icon: 'dashboard' },
-      //{ label: 'Notifications', to: '/app/notifications', icon: 'bell', badge: 5 },
-    ],
+    items: [{ label: 'Tableau de bord', to: '/app/dashboard', icon: 'dashboard' }],
   },
   {
     section: 'Comptabilité',
@@ -34,23 +31,12 @@ const nav = [
           { label: 'Journal vente (VT)', to: '/app/journaux/vente' },
           { label: 'Opérations diverses (OD)', to: '/app/journaux/od' },
           { label: 'Report à nouveau (RAN)', to: '/app/journaux/ran' },
-          //{ label: 'Import Excel', to: '/app/journaux/import' },
         ],
       },
       {
         label: 'Plan comptable',
         to: '/app/plan-comptable',
         icon: 'list',
-        // children: [
-        //   { label: 'Classe 1 — Capitaux', to: '/app/plan-comptable/classe1' },
-        //   { label: 'Classe 2 — Immobilisations', to: '/app/plan-comptable/classe2' },
-        //   { label: 'Classe 3 — Stocks', to: '/app/plan-comptable/classe3' },
-        //   { label: 'Classe 4 — Tiers', to: '/app/plan-comptable/classe4' },
-        //   { label: 'Classe 5 — Trésorerie', to: '/app/plan-comptable/classe5' },
-        //   { label: 'Classe 6 — Charges', to: '/app/plan-comptable/classe6' },
-        //   { label: 'Classe 7 — Produits', to: '/app/plan-comptable/classe7' },
-        //   { label: 'Paramétrer le plan', to: '/app/plan-comptable/parametres' },
-        // ],
       },
       {
         label: 'Grand livre',
@@ -66,7 +52,7 @@ const nav = [
   },
 
   {
-    section: 'États financiers',
+    section: 'États',
     items: [
       {
         label: 'Balance',
@@ -79,60 +65,13 @@ const nav = [
           { label: 'Balance de vérification', to: '/app/balance/verification' },
         ],
       },
-      // {
-      //   label: 'États de synthèse',
-      //   to: '/app/etats',
-      //   icon: 'layout',
-      //   children: [
-      //     { label: 'Bilan actif / passif', to: '/app/etats/bilan' },
-      //     { label: 'Compte de résultat', to: '/app/etats/resultat' },
-      //     { label: 'Tableau de flux de trésorerie', to: '/app/etats/flux' },
-      //     { label: 'TAFIRE', to: '/app/etats/tafire' },
-      //     { label: 'Notes annexes', to: '/app/etats/annexes' },
-      //   ],
-      // },
       {
         label: 'Immobilisations',
-        to: '/app/immobilisations',
+        to: '/app/immobilisations/registre',
         icon: 'monitor',
-        children: [
-          { label: 'Registre des immobilisations', to: '/app/immobilisations/registre' },
-          //{ label: "Plan d'amortissement", to: '/app/immobilisations/amortissement' },
-          //{ label: 'Cessions / Mises au rebut', to: '/app/immobilisations/cessions' },
-        ],
       },
     ],
   },
-
-  // {
-  //   section: 'Facturation',
-  //   items: [
-  //     {
-  //       label: 'Factures & Devis',
-  //       to: '/app/factures',
-  //       icon: 'package',
-  //       children: [
-  //         { label: 'Nouvelle facture', to: '/app/factures/new' },
-  //         { label: 'Liste des factures', to: '/app/factures/list' },
-  //         { label: 'Devis / Proformas', to: '/app/factures/devis' },
-  //         { label: 'Avoirs clients', to: '/app/factures/avoirs' },
-  //         { label: 'Bons de commande', to: '/app/factures/bdc' },
-  //         { label: 'Modèles de factures', to: '/app/factures/modeles' },
-  //       ],
-  //     },
-  //     {
-  //       label: 'Trésorerie',
-  //       to: '/app/tresorerie',
-  //       icon: 'dollar-sign',
-  //       children: [
-  //         { label: 'Soldes banques / caisses', to: '/app/tresorerie/soldes' },
-  //         { label: 'Rapprochement bancaire', to: '/app/tresorerie/rapprochement' },
-  //         { label: 'Prévisions de trésorerie', to: '/app/tresorerie/previsions' },
-  //         { label: 'Virements internes', to: '/app/tresorerie/virements' },
-  //       ],
-  //     },
-  //   ],
-  // },
 
   {
     section: 'Tiers',
@@ -162,37 +101,6 @@ const nav = [
       },
     ],
   },
-
-  // {
-  //   section: 'Gestion',
-  //   items: [
-  //     {
-  //       label: 'Gestion de stock',
-  //       to: '/app/stock',
-  //       icon: 'box',
-  //       children: [
-  //         { label: 'Articles / Produits', to: '/app/stock/articles' },
-  //         { label: 'Entrées de stock', to: '/app/stock/entrees' },
-  //         { label: 'Sorties de stock', to: '/app/stock/sorties' },
-  //         { label: 'Inventaire', to: '/app/stock/inventaire' },
-  //         { label: 'Valorisation du stock', to: '/app/stock/valorisation' },
-  //       ],
-  //     },
-  //     {
-  //       label: 'Rapports & Stats',
-  //       to: '/app/rapports',
-  //       icon: 'bar-chart-2',
-  //       children: [
-  //         { label: 'Tableau de bord analytique', to: '/app/rapports/analytique' },
-  //         { label: 'Rapport de ventes', to: '/app/rapports/ventes' },
-  //         { label: 'Rapport de charges', to: '/app/rapports/charges' },
-  //         { label: 'Indicateurs financiers (KPI)', to: '/app/rapports/kpi' },
-  //         { label: 'Exports personnalisés', to: '/app/rapports/exports' },
-  //         { label: 'Rapports planifiés', to: '/app/rapports/planifies' },
-  //       ],
-  //     },
-  //   ],
-  // },
 
   {
     section: 'Administration',
@@ -316,7 +224,7 @@ const leave = (el) => {
 
 <template>
   <aside
-    class="fixed md:static z-50 inset-y-0 left-0 w-65 md:w-46.25 bg-[#0f1a45] border-r border-white/5 flex flex-col transform transition-transform duration-300 ease-in-out md:translate-x-0"
+    class="fixed md:static z-50 inset-y-0 left-0 w-65 bg-[#0f1a45] border-r border-white/5 flex flex-col transform transition-transform duration-300 ease-in-out md:translate-x-0"
     :class="props.open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'"
   >
     <!-- ── LOGO ── -->
@@ -333,7 +241,7 @@ const leave = (el) => {
       <template v-for="group in nav" :key="group.section">
         <!-- Section label -->
         <p
-          class="px-4 pt-4 pb-1.5 text-[0.6rem] font-bold tracking-[0.12em] uppercase text-white/30 select-none"
+          class="px-4 pt-4 pb-1.5 text-[.7rem] font-bold tracking-[0.12em] uppercase text-white/30 select-none"
         >
           {{ group.section }}
         </p>
@@ -344,7 +252,7 @@ const leave = (el) => {
             <router-link
               v-if="!item.children"
               :to="item.to"
-              class="flex items-center justify-between px-2.5 py-2 rounded-md text-[0.7rem] transition-all duration-150"
+              class="flex items-center justify-between px-2.5 py-2 rounded-md text-[1rem] transition-all duration-150"
               :class="
                 isActive(item.to)
                   ? 'bg-white/5 text-[#ced6df]'
@@ -382,7 +290,7 @@ const leave = (el) => {
             <div v-else>
               <button
                 type="button"
-                class="w-full flex items-center justify-between px-2.5 py-2 rounded-md text-[0.7rem] cursor-pointer transition-all duration-150"
+                class="w-full flex items-center justify-between px-2.5 py-2 rounded-md text-[1rem] cursor-pointer transition-all duration-150"
                 :class="
                   isActive(item.to)
                     ? 'bg-white/5 text-[#ced6df]'
@@ -418,7 +326,7 @@ const leave = (el) => {
 
                   <!-- Chevron -->
                   <ChevronDown
-                    :size="11"
+                    :size="14"
                     class="transition-transform duration-250 opacity-50"
                     :class="{ 'rotate-180': openMenus[item.to] }"
                   />
@@ -433,7 +341,7 @@ const leave = (el) => {
                   <li v-for="child in item.children" :key="child.to">
                     <router-link
                       :to="child.to"
-                      class="flex items-center gap-2 px-2 py-1.25 rounded text-[0.65rem] transition-all duration-150"
+                      class="flex items-center gap-2 px-2 py-1.25 rounded text-[0.9rem] transition-all duration-150"
                       :class="
                         isActive(child.to)
                           ? 'bg-white/5 text-[#ced6df]'

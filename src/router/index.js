@@ -119,7 +119,11 @@ const router = createRouter({
           name: 'NotesAnnexes',
           component: () => import('@/modules/etats/pages/NotesAnnexesPage.vue'),
         },
-
+        {
+          path: 'immobilisations/registre',
+          name: 'ImmobilisationRegistre',
+          component: () => import('@/modules/etats/pages/ImmobilisationRegistrePage.vue'),
+        },
         {
           path: 'stock/articles',
           name: 'StockArticles',
