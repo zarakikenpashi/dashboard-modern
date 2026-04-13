@@ -1,7 +1,7 @@
 <script setup>
 import { useRoute, useRouter } from 'vue-router'
 import { ChevronDown } from '@lucide/vue'
-import { ref, watch, defineProps, defineEmits } from 'vue'
+import { ref, watch } from 'vue'
 
 const props = defineProps({
   open: Boolean,
