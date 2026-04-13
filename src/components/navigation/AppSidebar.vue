@@ -34,23 +34,23 @@ const nav = [
           { label: 'Journal vente (VT)', to: '/app/journaux/vente' },
           { label: 'Opérations diverses (OD)', to: '/app/journaux/od' },
           { label: 'Report à nouveau (RAN)', to: '/app/journaux/ran' },
-          { label: 'Import Excel', to: '/app/journaux/import' },
+          //{ label: 'Import Excel', to: '/app/journaux/import' },
         ],
       },
       {
         label: 'Plan comptable',
         to: '/app/plan-comptable',
         icon: 'list',
-        children: [
-          { label: 'Classe 1 — Capitaux', to: '/app/plan-comptable/classe1' },
-          { label: 'Classe 2 — Immobilisations', to: '/app/plan-comptable/classe2' },
-          { label: 'Classe 3 — Stocks', to: '/app/plan-comptable/classe3' },
-          { label: 'Classe 4 — Tiers', to: '/app/plan-comptable/classe4' },
-          { label: 'Classe 5 — Trésorerie', to: '/app/plan-comptable/classe5' },
-          { label: 'Classe 6 — Charges', to: '/app/plan-comptable/classe6' },
-          { label: 'Classe 7 — Produits', to: '/app/plan-comptable/classe7' },
-          { label: 'Paramétrer le plan', to: '/app/plan-comptable/parametres' },
-        ],
+        // children: [
+        //   { label: 'Classe 1 — Capitaux', to: '/app/plan-comptable/classe1' },
+        //   { label: 'Classe 2 — Immobilisations', to: '/app/plan-comptable/classe2' },
+        //   { label: 'Classe 3 — Stocks', to: '/app/plan-comptable/classe3' },
+        //   { label: 'Classe 4 — Tiers', to: '/app/plan-comptable/classe4' },
+        //   { label: 'Classe 5 — Trésorerie', to: '/app/plan-comptable/classe5' },
+        //   { label: 'Classe 6 — Charges', to: '/app/plan-comptable/classe6' },
+        //   { label: 'Classe 7 — Produits', to: '/app/plan-comptable/classe7' },
+        //   { label: 'Paramétrer le plan', to: '/app/plan-comptable/parametres' },
+        // ],
       },
       {
         label: 'Grand livre',
@@ -79,60 +79,60 @@ const nav = [
           { label: 'Balance de vérification', to: '/app/balance/verification' },
         ],
       },
-      {
-        label: 'États de synthèse',
-        to: '/app/etats',
-        icon: 'layout',
-        children: [
-          { label: 'Bilan actif / passif', to: '/app/etats/bilan' },
-          { label: 'Compte de résultat', to: '/app/etats/resultat' },
-          { label: 'Tableau de flux de trésorerie', to: '/app/etats/flux' },
-          { label: 'TAFIRE', to: '/app/etats/tafire' },
-          { label: 'Notes annexes', to: '/app/etats/annexes' },
-        ],
-      },
+      // {
+      //   label: 'États de synthèse',
+      //   to: '/app/etats',
+      //   icon: 'layout',
+      //   children: [
+      //     { label: 'Bilan actif / passif', to: '/app/etats/bilan' },
+      //     { label: 'Compte de résultat', to: '/app/etats/resultat' },
+      //     { label: 'Tableau de flux de trésorerie', to: '/app/etats/flux' },
+      //     { label: 'TAFIRE', to: '/app/etats/tafire' },
+      //     { label: 'Notes annexes', to: '/app/etats/annexes' },
+      //   ],
+      // },
       {
         label: 'Immobilisations',
         to: '/app/immobilisations',
         icon: 'monitor',
         children: [
           { label: 'Registre des immobilisations', to: '/app/immobilisations/registre' },
-          { label: "Plan d'amortissement", to: '/app/immobilisations/amortissement' },
-          { label: 'Cessions / Mises au rebut', to: '/app/immobilisations/cessions' },
+          //{ label: "Plan d'amortissement", to: '/app/immobilisations/amortissement' },
+          //{ label: 'Cessions / Mises au rebut', to: '/app/immobilisations/cessions' },
         ],
       },
     ],
   },
 
-  {
-    section: 'Facturation',
-    items: [
-      {
-        label: 'Factures & Devis',
-        to: '/app/factures',
-        icon: 'package',
-        children: [
-          { label: 'Nouvelle facture', to: '/app/factures/new' },
-          { label: 'Liste des factures', to: '/app/factures/list' },
-          { label: 'Devis / Proformas', to: '/app/factures/devis' },
-          { label: 'Avoirs clients', to: '/app/factures/avoirs' },
-          { label: 'Bons de commande', to: '/app/factures/bdc' },
-          { label: 'Modèles de factures', to: '/app/factures/modeles' },
-        ],
-      },
-      {
-        label: 'Trésorerie',
-        to: '/app/tresorerie',
-        icon: 'dollar-sign',
-        children: [
-          { label: 'Soldes banques / caisses', to: '/app/tresorerie/soldes' },
-          { label: 'Rapprochement bancaire', to: '/app/tresorerie/rapprochement' },
-          { label: 'Prévisions de trésorerie', to: '/app/tresorerie/previsions' },
-          { label: 'Virements internes', to: '/app/tresorerie/virements' },
-        ],
-      },
-    ],
-  },
+  // {
+  //   section: 'Facturation',
+  //   items: [
+  //     {
+  //       label: 'Factures & Devis',
+  //       to: '/app/factures',
+  //       icon: 'package',
+  //       children: [
+  //         { label: 'Nouvelle facture', to: '/app/factures/new' },
+  //         { label: 'Liste des factures', to: '/app/factures/list' },
+  //         { label: 'Devis / Proformas', to: '/app/factures/devis' },
+  //         { label: 'Avoirs clients', to: '/app/factures/avoirs' },
+  //         { label: 'Bons de commande', to: '/app/factures/bdc' },
+  //         { label: 'Modèles de factures', to: '/app/factures/modeles' },
+  //       ],
+  //     },
+  //     {
+  //       label: 'Trésorerie',
+  //       to: '/app/tresorerie',
+  //       icon: 'dollar-sign',
+  //       children: [
+  //         { label: 'Soldes banques / caisses', to: '/app/tresorerie/soldes' },
+  //         { label: 'Rapprochement bancaire', to: '/app/tresorerie/rapprochement' },
+  //         { label: 'Prévisions de trésorerie', to: '/app/tresorerie/previsions' },
+  //         { label: 'Virements internes', to: '/app/tresorerie/virements' },
+  //       ],
+  //     },
+  //   ],
+  // },
 
   {
     section: 'Tiers',
@@ -163,36 +163,36 @@ const nav = [
     ],
   },
 
-  {
-    section: 'Gestion',
-    items: [
-      {
-        label: 'Gestion de stock',
-        to: '/app/stock',
-        icon: 'box',
-        children: [
-          { label: 'Articles / Produits', to: '/app/stock/articles' },
-          { label: 'Entrées de stock', to: '/app/stock/entrees' },
-          { label: 'Sorties de stock', to: '/app/stock/sorties' },
-          { label: 'Inventaire', to: '/app/stock/inventaire' },
-          { label: 'Valorisation du stock', to: '/app/stock/valorisation' },
-        ],
-      },
-      {
-        label: 'Rapports & Stats',
-        to: '/app/rapports',
-        icon: 'bar-chart-2',
-        children: [
-          { label: 'Tableau de bord analytique', to: '/app/rapports/analytique' },
-          { label: 'Rapport de ventes', to: '/app/rapports/ventes' },
-          { label: 'Rapport de charges', to: '/app/rapports/charges' },
-          { label: 'Indicateurs financiers (KPI)', to: '/app/rapports/kpi' },
-          { label: 'Exports personnalisés', to: '/app/rapports/exports' },
-          { label: 'Rapports planifiés', to: '/app/rapports/planifies' },
-        ],
-      },
-    ],
-  },
+  // {
+  //   section: 'Gestion',
+  //   items: [
+  //     {
+  //       label: 'Gestion de stock',
+  //       to: '/app/stock',
+  //       icon: 'box',
+  //       children: [
+  //         { label: 'Articles / Produits', to: '/app/stock/articles' },
+  //         { label: 'Entrées de stock', to: '/app/stock/entrees' },
+  //         { label: 'Sorties de stock', to: '/app/stock/sorties' },
+  //         { label: 'Inventaire', to: '/app/stock/inventaire' },
+  //         { label: 'Valorisation du stock', to: '/app/stock/valorisation' },
+  //       ],
+  //     },
+  //     {
+  //       label: 'Rapports & Stats',
+  //       to: '/app/rapports',
+  //       icon: 'bar-chart-2',
+  //       children: [
+  //         { label: 'Tableau de bord analytique', to: '/app/rapports/analytique' },
+  //         { label: 'Rapport de ventes', to: '/app/rapports/ventes' },
+  //         { label: 'Rapport de charges', to: '/app/rapports/charges' },
+  //         { label: 'Indicateurs financiers (KPI)', to: '/app/rapports/kpi' },
+  //         { label: 'Exports personnalisés', to: '/app/rapports/exports' },
+  //         { label: 'Rapports planifiés', to: '/app/rapports/planifies' },
+  //       ],
+  //     },
+  //   ],
+  // },
 
   {
     section: 'Administration',

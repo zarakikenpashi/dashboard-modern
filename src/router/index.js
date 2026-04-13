@@ -52,57 +52,9 @@ const router = createRouter({
         },
 
         {
-          path: 'journaux/import',
-          name: 'ImportExcel',
-          component: () => import('@/modules/journaux/pages/ImportExcelPage.vue'),
-        },
-
-        {
-          path: 'plan-comptable/classe1',
-          name: 'Classe1',
-          component: () => import('@/modules/plan/pages/Classe1Page.vue'),
-        },
-
-        {
-          path: 'plan-comptable/classe2',
-          name: 'Classe2',
-          component: () => import('@/modules/plan/pages/Classe2Page.vue'),
-        },
-
-        {
-          path: 'plan-comptable/classe3',
-          name: 'Classe3',
-          component: () => import('@/modules/plan/pages/Classe3Page.vue'),
-        },
-
-        {
-          path: 'plan-comptable/classe4',
-          name: 'Classe4',
-          component: () => import('@/modules/plan/pages/Classe4Page.vue'),
-        },
-
-        {
-          path: 'plan-comptable/classe5',
-          name: 'Classe5',
-          component: () => import('@/modules/plan/pages/Classe5Page.vue'),
-        },
-
-        {
-          path: 'plan-comptable/classe6',
-          name: 'Classe6',
-          component: () => import('@/modules/plan/pages/Classe6Page.vue'),
-        },
-
-        {
-          path: 'plan-comptable/classe7',
-          name: 'Classe7',
-          component: () => import('@/modules/plan/pages/Classe7Page.vue'),
-        },
-
-        {
-          path: 'plan-comptable/parametres',
-          name: 'PlanComptableParametres',
-          component: () => import('@/modules/plan/pages/PlanComptableParametresPage.vue'),
+          path: 'plan-comptable',
+          name: 'PlanComptable',
+          component: () => import('@/modules/plan/pages/PlanComptablePage.vue'),
         },
 
         {
@@ -188,7 +140,6 @@ const router = createRouter({
           name: 'StockInventaire',
           component: () => import('@/modules/stock/pages/StockInventairePage.vue'),
         },
-
         {
           path: '',
           redirect: '/app/dashboard',
