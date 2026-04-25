@@ -10,11 +10,15 @@ const filterStatut = ref('all')
 const periodeLabel = ref('Janvier 2026')
 const ancienSolde = ref(0)
 
+// Pagination
+const pageSize = ref(8)
+const currentPage = ref(1)
+
 // Modals
-const showDetailModal = ref(false) // Voir détails
-const showEditModal = ref(false) // Modifier
-const showDeleteModal = ref(false) // Confirmer suppression
-const showSaisieModal = ref(false) // Nouvelle écriture
+const showDetailModal = ref(false)
+const showEditModal = ref(false)
+const showDeleteModal = ref(false)
+
 const selectedEntry = ref(null)
 const entryToDelete = ref(null)
 
@@ -31,7 +35,7 @@ const form = reactive({
   statut: 'En attente',
 })
 
-// Formulaire édition (copie de l'entrée sélectionnée)
+// Formulaire édition
 const editForm = reactive({
   id: null,
   jour: '',
@@ -193,13 +197,32 @@ const ecritures = ref([
   },
 ])
 
-// ─── COMPUTED ─────────────────────────────────────────────────────────────────
+// ─── COMPUTED — STATS ─────────────────────────────────────────────────────────
 const totalDebit = computed(() => ecritures.value.reduce((s, e) => s + e.debit, 0))
 const totalCredit = computed(() => ecritures.value.reduce((s, e) => s + e.credit, 0))
 const nouveauSolde = computed(() => ancienSolde.value + totalDebit.value - totalCredit.value)
 
-const filteredEcritures = computed(() =>
-  ecritures.value.filter((e) => {
+const stats = computed(() => {
+  const pieces = [...new Set(ecritures.value.map((e) => e.numPiece))]
+  const ttc = ecritures.value.filter((e) => e.debit > 0).reduce((s, e) => s + e.debit, 0)
+  const mois = new Date().getMonth()
+  const ceMois = ecritures.value.filter((e) => new Date().getMonth() === mois).length
+  return {
+    totalAchats: ttc,
+    nbPieces: pieces.length,
+    enAttente: pieces.filter(
+      (p) => ecritures.value.find((e) => e.numPiece === p)?.statut === 'En attente',
+    ).length,
+    payees: pieces.filter((p) => ecritures.value.find((e) => e.numPiece === p)?.statut === 'Payé')
+      .length,
+    ceMois,
+  }
+})
+
+// ─── COMPUTED — FILTRE + PAGINATION ──────────────────────────────────────────
+const filteredEcritures = computed(() => {
+  currentPage.value = 1 // reset on filter change
+  return ecritures.value.filter((e) => {
     const q = searchQuery.value.toLowerCase()
     const matchQ =
       !q ||
@@ -209,11 +232,31 @@ const filteredEcritures = computed(() =>
       e.numCompteTiers.includes(q) ||
       e.numFacture.toLowerCase().includes(q)
     return matchQ && (filterStatut.value === 'all' || e.statut === filterStatut.value)
-  }),
+  })
+})
+
+const totalPages = computed(() =>
+  Math.max(1, Math.ceil(filteredEcritures.value.length / pageSize.value)),
 )
 
-const filteredDebit = computed(() => filteredEcritures.value.reduce((s, e) => s + e.debit, 0))
-const filteredCredit = computed(() => filteredEcritures.value.reduce((s, e) => s + e.credit, 0))
+const pagedEcritures = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  return filteredEcritures.value.slice(start, start + pageSize.value)
+})
+
+const paginationLabel = computed(() => {
+  const total = filteredEcritures.value.length
+  const start = Math.min((currentPage.value - 1) * pageSize.value + 1, total)
+  const end = Math.min(currentPage.value * pageSize.value, total)
+  return total ? `${start} – ${end} sur ${total}` : '0 résultat'
+})
+
+function prevPage() {
+  if (currentPage.value > 1) currentPage.value--
+}
+function nextPage() {
+  if (currentPage.value < totalPages.value) currentPage.value++
+}
 
 const pieceGroups = computed(() => {
   const groups = {}
@@ -224,12 +267,7 @@ const pieceGroups = computed(() => {
   return groups
 })
 
-const lignesPiece = computed(() => ecritures.value.filter((e) => e.numPiece === form.numPiece))
-const debitPiece = computed(() => lignesPiece.value.reduce((s, e) => s + e.debit, 0))
-const creditPiece = computed(() => lignesPiece.value.reduce((s, e) => s + e.credit, 0))
-const equilibre = computed(() => debitPiece.value - creditPiece.value)
-
-// ─── MÉTHODES — UTILS ─────────────────────────────────────────────────────────
+// ─── UTILS ────────────────────────────────────────────────────────────────────
 function fmt(n) {
   if (!n || n === 0) return '—'
   return new Intl.NumberFormat('fr-FR').format(Math.round(n))
@@ -241,13 +279,12 @@ function goToPage() {
   router.push({ name: 'NewJournalAchat' })
 }
 
-// ─── MÉTHODES — VOIR DÉTAILS ───────────────────────────────────────────────────
+// ─── ACTIONS ──────────────────────────────────────────────────────────────────
 function openDetail(entry) {
   selectedEntry.value = entry
   showDetailModal.value = true
 }
 
-// ─── MÉTHODES — MODIFIER ──────────────────────────────────────────────────────
 function openEdit(entry, event) {
   event?.stopPropagation()
   Object.assign(editForm, { ...entry })
@@ -273,7 +310,6 @@ function saveEdit() {
   showEditModal.value = false
 }
 
-// ─── MÉTHODES — SUPPRIMER ─────────────────────────────────────────────────────
 function askDelete(entry, event) {
   event?.stopPropagation()
   entryToDelete.value = entry
@@ -283,7 +319,6 @@ function askDelete(entry, event) {
 function confirmDelete() {
   if (!entryToDelete.value) return
   ecritures.value = ecritures.value.filter((e) => e.id !== entryToDelete.value.id)
-  // Fermer aussi le modal détail si c'est la même entrée
   if (selectedEntry.value?.id === entryToDelete.value.id) {
     showDetailModal.value = false
     selectedEntry.value = null
@@ -292,7 +327,6 @@ function confirmDelete() {
   showDeleteModal.value = false
 }
 
-// ─── MÉTHODES — NOUVELLE ÉCRITURE ─────────────────────────────────────────────
 function saveLigne() {
   if (!form.numCompteGen || !form.libelle) return
   ecritures.value.push({
@@ -322,7 +356,7 @@ function changeStatut(entry, statut) {
   showDetailModal.value = false
 }
 
-// ─── COULEURS STATUT ──────────────────────────────────────────────────────────
+// ─── STATUT COLORS ────────────────────────────────────────────────────────────
 const statutColor = {
   Payé: 'text-emerald-700 bg-emerald-50 border border-emerald-200',
   'En attente': 'text-amber-700   bg-amber-50   border border-amber-200',
@@ -332,16 +366,6 @@ const statutDot = {
   Payé: 'bg-emerald-500',
   'En attente': 'bg-amber-400',
   Annulé: 'bg-red-400',
-}
-
-function handleEditClick(event) {
-  openEdit(selectedEntry, event)
-  showDetailModal.value = false
-}
-
-function handleDeleteClick(event) {
-  askDelete(selectedEntry, event)
-  showDetailModal.value = false
 }
 </script>
 
@@ -371,67 +395,102 @@ function handleDeleteClick(event) {
       </button>
     </div>
 
-    <!-- ── BANDEAU SOLDES ──────────────────────────────────────────────── -->
-    <div class="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
-      <div class="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border">
-        <div class="flex items-center justify-between sm:block px-5 py-4 gap-3">
-          <span
-            class="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-1"
-            >Ancien solde</span
-          >
-          <div class="flex items-center gap-2">
-            <input
-              v-model.number="ancienSolde"
-              type="number"
-              class="w-36 text-right text-sm font-semibold text-foreground border-b border-dashed border-border bg-transparent focus:outline-none focus:border-primary transition-colors"
-            />
-            <span class="text-xs text-muted-foreground shrink-0">FCFA</span>
-          </div>
-        </div>
-        <div class="flex items-center justify-between sm:block px-5 py-4 gap-3">
-          <span
-            class="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-1"
-            >Totaux journal</span
-          >
-          <div class="flex items-center gap-5">
-            <div>
-              <p class="text-xs text-muted-foreground">Débit</p>
-              <p class="text-sm font-semibold text-foreground font-mono">
-                {{ fmtFull(totalDebit) }}
-              </p>
-            </div>
-            <div class="w-px h-8 bg-border hidden sm:block"></div>
-            <div>
-              <p class="text-xs text-muted-foreground">Crédit</p>
-              <p class="text-sm font-semibold text-muted-foreground font-mono">
-                {{ fmtFull(totalCredit) }}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between sm:block px-5 py-4 gap-3">
-          <span
-            class="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-1"
-            >Nouveau solde</span
-          >
-          <p
-            class="text-lg font-bold font-mono"
-            :class="nouveauSolde >= 0 ? 'text-emerald-600' : 'text-destructive'"
-          >
-            {{ fmtFull(nouveauSolde) }}
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── TABLEAU JOURNAL ─────────────────────────────────────────────── -->
-    <div class="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
-      <!-- Toolbar -->
-      <div class="px-4 sm:px-5 py-4 border-b border-border">
-        <div class="flex flex-col sm:flex-row gap-3">
-          <div class="flex items-center gap-2 shrink-0">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <!-- Total Achats -->
+      <div class="bg-card rounded-xl border border-border shadow-sm p-5">
+        <div class="flex items-start justify-between mb-3">
+          <span class="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+            Total Achats
+          </span>
+          <div class="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
             <svg
               class="w-4 h-4 text-muted-foreground"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+              />
+            </svg>
+          </div>
+        </div>
+        <p
+          class="text-2xl sm:text-3xl font-bold text-foreground tracking-tight font-mono leading-none"
+        >
+          {{ fmt(stats.totalAchats) || '0' }}
+        </p>
+        <p class="text-xs text-muted-foreground mt-2">FCFA · {{ stats.nbPieces }} écritures</p>
+      </div>
+
+      <!-- En attente -->
+      <div class="bg-card rounded-xl border border-border shadow-sm p-5">
+        <div class="flex items-start justify-between mb-3">
+          <span class="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+            En Attente
+          </span>
+          <div class="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+            <svg
+              class="w-4 h-4 text-amber-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </div>
+        </div>
+        <p class="text-2xl sm:text-3xl font-bold text-amber-500 tracking-tight leading-none">
+          {{ stats.enAttente }}
+        </p>
+        <p class="text-xs text-muted-foreground mt-2">Factures à régler</p>
+      </div>
+
+      <!-- Payées -->
+      <div class="bg-card rounded-xl border border-border shadow-sm p-5">
+        <div class="flex items-start justify-between mb-3">
+          <span class="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+            Payées
+          </span>
+          <div class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
+            <svg
+              class="w-4 h-4 text-emerald-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </div>
+        </div>
+        <p class="text-2xl sm:text-3xl font-bold text-emerald-500 tracking-tight leading-none">
+          {{ stats.payees }}
+        </p>
+        <p class="text-xs text-muted-foreground mt-2">Factures soldées</p>
+      </div>
+
+      <!-- Ce mois -->
+      <div class="bg-card rounded-xl border border-border shadow-sm p-5">
+        <div class="flex items-start justify-between mb-3">
+          <span class="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+            Ce Mois
+          </span>
+          <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+            <svg
+              class="w-4 h-4 text-blue-500"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -443,37 +502,73 @@ function handleDeleteClick(event) {
                 d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
               />
             </svg>
-            <input
-              v-model="periodeLabel"
-              class="text-sm font-medium text-foreground w-36 bg-transparent border-b border-dashed border-border focus:outline-none focus:border-primary transition-colors"
-            />
           </div>
-          <div class="relative flex-1">
-            <svg
-              class="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+        </div>
+        <p class="text-2xl sm:text-3xl font-bold text-foreground tracking-tight leading-none">
+          {{ stats.ceMois }}
+        </p>
+        <p class="text-xs text-muted-foreground mt-2">Nouvelles écritures</p>
+      </div>
+    </div>
+
+    <!-- ── TABLEAU JOURNAL ─────────────────────────────────────────────── -->
+    <div class="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+      <!-- ════ TOOLBAR — 2 colonnes : [Période + Recherche + Filtre] | [Pagination] ════ -->
+      <div class="px-4 sm:px-5 py-3.5 border-b border-border">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <!-- Colonne gauche : période + recherche + filtre + export -->
+          <div class="flex flex-wrap items-center gap-2">
+            <!-- Période -->
+            <div class="flex items-center gap-1.5 shrink-0">
+              <svg
+                class="w-3.5 h-3.5 text-muted-foreground"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
+              </svg>
+              <input
+                v-model="periodeLabel"
+                class="text-sm font-medium text-foreground w-32 bg-transparent border-b border-dashed border-border focus:outline-none focus:border-primary transition-colors"
               />
-            </svg>
-            <input
-              v-model="searchQuery"
-              type="text"
-              placeholder="Libellé, N° pièce, N° compte..."
-              class="w-full pl-9 pr-4 py-2 text-sm bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-            />
-          </div>
-          <div class="flex gap-2">
-            <div class="relative flex-1 sm:flex-none">
+            </div>
+
+            <div class="w-px h-5 bg-border hidden sm:block"></div>
+
+            <!-- Recherche -->
+            <div class="relative flex-1 min-w-[160px]">
+              <svg
+                class="w-3.5 h-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+              <input
+                v-model="searchQuery"
+                type="text"
+                placeholder="Libellé, N° pièce, compte..."
+                class="w-full pl-8 pr-3 py-1.5 text-sm bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+              />
+            </div>
+
+            <!-- Filtre statut -->
+            <div class="relative">
               <select
                 v-model="filterStatut"
-                class="w-full appearance-none text-sm pl-3 pr-8 py-2 bg-background border border-border rounded-lg text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+                class="appearance-none text-sm pl-3 pr-7 py-1.5 bg-background border border-border rounded-lg text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
               >
                 <option value="all">Tous</option>
                 <option value="Payé">Payé</option>
@@ -481,7 +576,7 @@ function handleDeleteClick(event) {
                 <option value="Annulé">Annulé</option>
               </select>
               <svg
-                class="w-3.5 h-3.5 text-muted-foreground absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                class="w-3 h-3 text-muted-foreground absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -494,10 +589,12 @@ function handleDeleteClick(event) {
                 />
               </svg>
             </div>
+
+            <!-- Export -->
             <button
-              class="flex items-center gap-1.5 text-sm text-muted-foreground shrink-0 border border-border rounded-lg px-3 py-2 hover:bg-muted hover:text-foreground transition-colors"
+              class="flex items-center gap-1.5 text-sm text-muted-foreground border border-border rounded-lg px-2.5 py-1.5 hover:bg-muted hover:text-foreground transition-colors"
             >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
@@ -505,8 +602,133 @@ function handleDeleteClick(event) {
                   d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                 />
               </svg>
-              <span class="hidden sm:inline">Exporter</span>
+              <span class="hidden sm:inline text-xs">Exporter</span>
             </button>
+          </div>
+
+          <!-- Colonne droite : pagination -->
+          <div class="flex items-center justify-start lg:justify-end gap-2">
+            <!-- Label -->
+            <span class="text-xs text-muted-foreground font-mono shrink-0">
+              {{ paginationLabel }}
+            </span>
+
+            <!-- Lignes par page -->
+            <div class="relative">
+              <select
+                v-model.number="pageSize"
+                class="appearance-none text-xs pl-2.5 pr-6 py-1.5 bg-background border border-border rounded-lg text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+              >
+                <option :value="5">5 / page</option>
+                <option :value="8">8 / page</option>
+                <option :value="15">15 / page</option>
+                <option :value="25">25 / page</option>
+              </select>
+              <svg
+                class="w-3 h-3 text-muted-foreground absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2.5"
+                  d="M6 9l6 6 6-6"
+                />
+              </svg>
+            </div>
+
+            <!-- Boutons nav -->
+            <div class="flex items-center gap-1">
+              <!-- Première page -->
+              <button
+                @click="currentPage = 1"
+                :disabled="currentPage === 1"
+                class="w-7 h-7 flex items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
+                  />
+                </svg>
+              </button>
+
+              <!-- Précédent -->
+              <button
+                @click="prevPage"
+                :disabled="currentPage === 1"
+                class="w-7 h-7 flex items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+              </button>
+
+              <!-- Numéros de pages -->
+              <template v-for="p in totalPages" :key="p">
+                <button
+                  v-if="Math.abs(p - currentPage) <= 1 || p === 1 || p === totalPages"
+                  @click="currentPage = p"
+                  class="w-7 h-7 flex items-center justify-center rounded-md border text-xs font-medium transition-colors"
+                  :class="
+                    p === currentPage
+                      ? 'bg-primary text-white border-primary'
+                      : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground'
+                  "
+                >
+                  {{ p }}
+                </button>
+                <span
+                  v-else-if="
+                    (p === 2 && currentPage > 3) ||
+                    (p === totalPages - 1 && currentPage < totalPages - 2)
+                  "
+                  class="text-muted-foreground text-xs px-0.5"
+                  >…</span
+                >
+              </template>
+
+              <!-- Suivant -->
+              <button
+                @click="nextPage"
+                :disabled="currentPage === totalPages"
+                class="w-7 h-7 flex items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+
+              <!-- Dernière page -->
+              <button
+                @click="currentPage = totalPages"
+                :disabled="currentPage === totalPages"
+                class="w-7 h-7 flex items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M13 5l7 7-7 7M5 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -527,7 +749,7 @@ function handleDeleteClick(event) {
                 N°Pièce
               </th>
               <th
-                class="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide px-3 py-3 w-28"
+                class="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide px-3 py-3 w-24"
               >
                 N°Facture
               </th>
@@ -556,7 +778,6 @@ function handleDeleteClick(event) {
               >
                 Crédit
               </th>
-              <!-- Colonne actions — toujours visible -->
               <th
                 class="text-center text-xs font-semibold text-muted-foreground uppercase tracking-wide px-3 py-3 w-28"
               >
@@ -565,7 +786,7 @@ function handleDeleteClick(event) {
             </tr>
           </thead>
           <tbody>
-            <template v-for="entry in filteredEcritures" :key="entry.id">
+            <template v-for="entry in pagedEcritures" :key="entry.id">
               <tr
                 class="border-b border-border transition-colors group"
                 :class="[
@@ -603,7 +824,7 @@ function handleDeleteClick(event) {
                 </td>
                 <td class="px-3 py-2.5">
                   <div class="flex items-center gap-2">
-                    <span class="text-sm text-foreground truncate max-w-[200px]">{{
+                    <span class="text-sm text-foreground truncate max-w-[180px]">{{
                       entry.libelle
                     }}</span>
                     <span
@@ -633,14 +854,14 @@ function handleDeleteClick(event) {
                   <span v-else class="text-muted-foreground/30 text-xs">—</span>
                 </td>
 
-                <!-- ── BOUTONS ACTIONS ── -->
+                <!-- ACTIONS -->
                 <td class="px-3 py-2.5">
                   <div class="flex items-center justify-center gap-1">
-                    <!-- Voir détails -->
+                    <!-- Voir -->
                     <button
                       @click.stop="openDetail(entry)"
                       title="Voir les détails"
-                      class="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all duration-150"
+                      class="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all"
                     >
                       <svg
                         class="w-3.5 h-3.5"
@@ -662,12 +883,11 @@ function handleDeleteClick(event) {
                         />
                       </svg>
                     </button>
-
                     <!-- Modifier -->
                     <button
                       @click.stop="openEdit(entry, $event)"
                       title="Modifier"
-                      class="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-amber-600 hover:bg-amber-50 transition-all duration-150"
+                      class="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-amber-600 hover:bg-amber-50 transition-all"
                     >
                       <svg
                         class="w-3.5 h-3.5"
@@ -683,12 +903,11 @@ function handleDeleteClick(event) {
                         />
                       </svg>
                     </button>
-
                     <!-- Supprimer -->
                     <button
                       @click.stop="askDelete(entry, $event)"
                       title="Supprimer"
-                      class="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-150"
+                      class="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
                     >
                       <svg
                         class="w-3.5 h-3.5"
@@ -709,7 +928,7 @@ function handleDeleteClick(event) {
               </tr>
             </template>
 
-            <tr v-if="!filteredEcritures.length">
+            <tr v-if="!pagedEcritures.length">
               <td colspan="9" class="text-center py-16 text-muted-foreground text-sm">
                 <svg
                   class="w-10 h-10 mx-auto mb-3 text-border"
@@ -728,39 +947,17 @@ function handleDeleteClick(event) {
               </td>
             </tr>
           </tbody>
-
-          <tfoot v-if="filteredEcritures.length">
-            <tr class="bg-sidebar">
-              <td
-                colspan="5"
-                class="px-4 py-3 text-xs font-medium text-sidebar-foreground/40 uppercase tracking-wide"
-              >
-                {{ filteredEcritures.length }} ligne(s)
-              </td>
-              <td class="px-3 py-3 text-xs text-sidebar-foreground/40">Total période</td>
-              <td class="px-3 py-3 text-right font-mono font-bold text-sidebar-foreground text-sm">
-                {{ fmtFull(filteredDebit) }}
-              </td>
-              <td
-                class="px-3 py-3 text-right font-mono font-semibold text-sidebar-foreground/50 text-sm"
-              >
-                {{ fmtFull(filteredCredit) }}
-              </td>
-              <td></td>
-            </tr>
-          </tfoot>
         </table>
       </div>
 
       <!-- ── CARTES MOBILE ───────────────────────────────────────────── -->
       <div class="md:hidden divide-y divide-border">
         <div
-          v-for="entry in filteredEcritures"
+          v-for="entry in pagedEcritures"
           :key="entry.id"
           class="px-4 py-3.5 transition-colors"
           :class="pieceGroups[entry.numPiece] === 1 ? 'bg-muted/30' : 'bg-card'"
         >
-          <!-- Ligne 1 : codes + statut -->
           <div class="flex items-start justify-between gap-2 mb-1.5">
             <div class="flex items-center gap-1.5 flex-wrap min-w-0">
               <span
@@ -785,30 +982,23 @@ function handleDeleteClick(event) {
               {{ entry.statut }}
             </span>
           </div>
-
-          <!-- Libellé -->
           <p class="text-sm text-foreground truncate mb-2">{{ entry.libelle }}</p>
-
-          <!-- Montants + actions -->
           <div class="flex items-center justify-between mt-2 pt-2 border-t border-border">
             <div class="flex gap-4">
-              <div v-if="entry.debit" class="text-right">
+              <div v-if="entry.debit">
                 <p class="text-xs text-muted-foreground">Débit</p>
                 <p class="text-sm font-mono font-bold text-foreground">{{ fmt(entry.debit) }}</p>
               </div>
-              <div v-if="entry.credit" class="text-right">
+              <div v-if="entry.credit">
                 <p class="text-xs text-muted-foreground">Crédit</p>
                 <p class="text-sm font-mono font-semibold text-muted-foreground">
                   {{ fmt(entry.credit) }}
                 </p>
               </div>
             </div>
-
-            <!-- Boutons mobile -->
             <div class="flex items-center gap-1">
               <button
                 @click="openDetail(entry)"
-                title="Détails"
                 class="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -822,7 +1012,6 @@ function handleDeleteClick(event) {
               </button>
               <button
                 @click="openEdit(entry, $event)"
-                title="Modifier"
                 class="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-amber-600 hover:bg-amber-50 transition-colors"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -836,7 +1025,6 @@ function handleDeleteClick(event) {
               </button>
               <button
                 @click="askDelete(entry, $event)"
-                title="Supprimer"
                 class="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -852,10 +1040,7 @@ function handleDeleteClick(event) {
           </div>
         </div>
 
-        <div
-          v-if="!filteredEcritures.length"
-          class="text-center py-16 text-muted-foreground text-sm"
-        >
+        <div v-if="!pagedEcritures.length" class="text-center py-16 text-muted-foreground text-sm">
           <svg
             class="w-10 h-10 mx-auto mb-3 text-border"
             fill="none"
@@ -870,32 +1055,6 @@ function handleDeleteClick(event) {
             />
           </svg>
           Aucune écriture pour cette période
-        </div>
-
-        <div
-          v-if="filteredEcritures.length"
-          class="bg-sidebar px-4 py-3.5 flex justify-between items-center"
-        >
-          <div>
-            <p class="text-xs text-sidebar-foreground/40 uppercase tracking-wide">Totaux</p>
-            <p class="text-xs text-sidebar-foreground/40 mt-0.5">
-              {{ filteredEcritures.length }} ligne(s)
-            </p>
-          </div>
-          <div class="flex gap-6">
-            <div class="text-right">
-              <p class="text-xs text-sidebar-foreground/40 mb-0.5">Débit</p>
-              <p class="text-sm font-mono font-bold text-sidebar-foreground">
-                {{ fmtFull(filteredDebit) }}
-              </p>
-            </div>
-            <div class="text-right">
-              <p class="text-xs text-sidebar-foreground/40 mb-0.5">Crédit</p>
-              <p class="text-sm font-mono font-semibold text-sidebar-foreground/50">
-                {{ fmtFull(filteredCredit) }}
-              </p>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -921,7 +1080,6 @@ function handleDeleteClick(event) {
         <div
           class="bg-card rounded-t-2xl sm:rounded-2xl shadow-xl border border-border w-full sm:max-w-md p-6 space-y-4 max-h-[85vh] overflow-y-auto"
         >
-          <!-- Header -->
           <div class="flex items-start justify-between">
             <div class="min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
@@ -958,8 +1116,6 @@ function handleDeleteClick(event) {
               </svg>
             </button>
           </div>
-
-          <!-- Infos -->
           <div class="bg-muted/40 rounded-xl border border-border p-4 space-y-3">
             <div class="grid grid-cols-2 gap-3 text-sm">
               <div>
@@ -998,8 +1154,6 @@ function handleDeleteClick(event) {
               </div>
             </div>
           </div>
-
-          <!-- Changer statut -->
           <div>
             <p class="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
               Statut de la pièce {{ selectedEntry.numPiece }}
@@ -1020,11 +1174,9 @@ function handleDeleteClick(event) {
               </button>
             </div>
           </div>
-
-          <!-- Footer actions -->
           <div class="flex gap-2 pt-1">
             <button
-              @click="handleEditClick"
+              @click="openEdit(selectedEntry, $event)"
               class="flex-1 flex items-center justify-center gap-2 text-sm font-medium border border-border rounded-lg py-2 text-foreground hover:bg-muted transition-colors"
             >
               <svg
@@ -1043,7 +1195,7 @@ function handleDeleteClick(event) {
               Modifier
             </button>
             <button
-              @click="handleDeleteClick"
+              @click="askDelete(selectedEntry, $event)"
               class="flex-1 flex items-center justify-center gap-2 text-sm font-medium border border-destructive/20 rounded-lg py-2 text-destructive hover:bg-destructive/5 transition-colors"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1082,7 +1234,6 @@ function handleDeleteClick(event) {
         <div
           class="bg-card rounded-t-2xl sm:rounded-2xl shadow-xl border border-border w-full sm:max-w-2xl max-h-[92vh] overflow-y-auto"
         >
-          <!-- Header -->
           <div
             class="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-card z-10"
           >
@@ -1123,9 +1274,7 @@ function handleDeleteClick(event) {
               </svg>
             </button>
           </div>
-
           <div class="p-6 space-y-5">
-            <!-- En-tête pièce -->
             <div>
               <p class="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
                 En-tête de pièce
@@ -1193,21 +1342,16 @@ function handleDeleteClick(event) {
                 </div>
               </div>
             </div>
-
             <div class="border-t border-border"></div>
-
-            <!-- Ligne comptable -->
             <div>
               <p class="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
                 Ligne d'écriture
               </p>
               <div class="grid grid-cols-2 gap-3 mb-3">
                 <div class="space-y-1.5">
-                  <label
-                    class="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                  <label class="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                    >N° Compte général <span class="text-destructive">*</span></label
                   >
-                    N° Compte général <span class="text-destructive">*</span>
-                  </label>
                   <input
                     v-model="editForm.numCompteGen"
                     type="text"
@@ -1226,9 +1370,9 @@ function handleDeleteClick(event) {
                 </div>
               </div>
               <div class="space-y-1.5 mb-3">
-                <label class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Libellé écriture <span class="text-destructive">*</span>
-                </label>
+                <label class="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                  >Libellé écriture <span class="text-destructive">*</span></label
+                >
                 <input
                   v-model="editForm.libelle"
                   type="text"
@@ -1260,8 +1404,6 @@ function handleDeleteClick(event) {
                 </div>
               </div>
             </div>
-
-            <!-- Actions -->
             <div class="flex flex-col-reverse sm:flex-row gap-2 pt-1">
               <button
                 @click="showEditModal = false"
@@ -1311,7 +1453,6 @@ function handleDeleteClick(event) {
         <div
           class="bg-card rounded-2xl shadow-xl border border-border w-full max-w-sm p-6 space-y-5"
         >
-          <!-- Icône + titre -->
           <div class="flex flex-col items-center text-center gap-3">
             <div class="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
               <svg
@@ -1333,20 +1474,16 @@ function handleDeleteClick(event) {
               <p class="text-sm text-muted-foreground mt-1">Cette action est irréversible.</p>
             </div>
           </div>
-
-          <!-- Aperçu de la ligne -->
           <div class="bg-muted/50 rounded-xl border border-border px-4 py-3 space-y-1.5">
             <div class="flex items-center gap-2">
               <span
                 class="text-xs font-mono font-bold text-foreground bg-muted px-1.5 py-0.5 rounded"
+                >{{ entryToDelete.numPiece }}</span
               >
-                {{ entryToDelete.numPiece }}
-              </span>
               <span
                 class="text-xs font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded font-semibold"
+                >{{ entryToDelete.numCompteGen }}</span
               >
-                {{ entryToDelete.numCompteGen }}
-              </span>
             </div>
             <p class="text-sm text-foreground truncate">{{ entryToDelete.libelle }}</p>
             <p class="text-xs text-muted-foreground font-mono">
@@ -1354,8 +1491,6 @@ function handleDeleteClick(event) {
               <span v-if="entryToDelete.credit">Crédit : {{ fmt(entryToDelete.credit) }} FCFA</span>
             </p>
           </div>
-
-          <!-- Boutons -->
           <div class="flex gap-3">
             <button
               @click="showDeleteModal = false"
@@ -1377,241 +1512,6 @@ function handleDeleteClick(event) {
               </svg>
               Supprimer
             </button>
-          </div>
-        </div>
-      </div>
-    </Transition>
-  </Teleport>
-
-  <!-- ══════════════════════════════════════════════════════════════════
-       MODAL — NOUVELLE SAISIE
-  ══════════════════════════════════════════════════════════════════ -->
-  <Teleport to="body">
-    <Transition
-      enter-active-class="transition duration-200 ease-out"
-      enter-from-class="opacity-0 translate-y-4"
-      enter-to-class="opacity-100 translate-y-0"
-      leave-active-class="transition duration-150 ease-in"
-      leave-from-class="opacity-100 translate-y-0"
-      leave-to-class="opacity-0 translate-y-4"
-    >
-      <div
-        v-if="showSaisieModal"
-        class="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/40 backdrop-blur-sm"
-        @click.self="showSaisieModal = false"
-      >
-        <div
-          class="bg-card rounded-t-2xl sm:rounded-2xl shadow-xl border border-border w-full sm:max-w-2xl max-h-[92vh] overflow-y-auto"
-        >
-          <div
-            class="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-card z-10"
-          >
-            <div>
-              <h2 class="text-base font-semibold text-foreground">Saisie d'écriture</h2>
-              <p class="text-xs text-muted-foreground mt-0.5">
-                Journal ACHATS LOCAUX · {{ periodeLabel }}
-              </p>
-            </div>
-            <button
-              @click="showSaisieModal = false"
-              class="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
-          <div class="p-6 space-y-5">
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div class="space-y-1.5">
-                <label class="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-                  >Jour <span class="text-destructive">*</span></label
-                >
-                <input
-                  v-model.number="form.jour"
-                  type="number"
-                  min="1"
-                  max="31"
-                  class="w-full text-sm border border-border rounded-lg px-3 py-2 font-mono bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                />
-              </div>
-              <div class="space-y-1.5">
-                <label class="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-                  >N° Pièce <span class="text-destructive">*</span></label
-                >
-                <input
-                  v-model="form.numPiece"
-                  type="text"
-                  placeholder="ACH-001"
-                  class="w-full text-sm border border-border rounded-lg px-3 py-2 font-mono bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                />
-              </div>
-              <div class="space-y-1.5">
-                <label class="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-                  >N° Facture</label
-                >
-                <input
-                  v-model="form.numFacture"
-                  type="text"
-                  class="w-full text-sm border border-border rounded-lg px-3 py-2 font-mono bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                />
-              </div>
-              <div class="space-y-1.5">
-                <label class="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-                  >Statut</label
-                >
-                <div class="relative">
-                  <select
-                    v-model="form.statut"
-                    class="w-full appearance-none text-sm border border-border rounded-lg px-3 py-2 pr-8 bg-background text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                  >
-                    <option>En attente</option>
-                    <option>Payé</option>
-                    <option>Annulé</option>
-                  </select>
-                  <svg
-                    class="w-3.5 h-3.5 text-muted-foreground absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2.5"
-                      d="M6 9l6 6 6-6"
-                    />
-                  </svg>
-                </div>
-              </div>
-            </div>
-            <div class="border-t border-border"></div>
-            <div class="grid grid-cols-2 gap-3 mb-3">
-              <div class="space-y-1.5">
-                <label class="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-                  >N° Compte général <span class="text-destructive">*</span></label
-                >
-                <input
-                  v-model="form.numCompteGen"
-                  type="text"
-                  placeholder="601000"
-                  class="w-full text-sm border border-border rounded-lg px-3 py-2 font-mono bg-background text-primary font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                />
-              </div>
-              <div class="space-y-1.5">
-                <label class="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-                  >N° Compte tiers</label
-                >
-                <input
-                  v-model="form.numCompteTiers"
-                  type="text"
-                  placeholder="401001"
-                  class="w-full text-sm border border-border rounded-lg px-3 py-2 font-mono bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                />
-              </div>
-            </div>
-            <div class="space-y-1.5 mb-3">
-              <label class="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-                >Libellé écriture <span class="text-destructive">*</span></label
-              >
-              <input
-                v-model="form.libelle"
-                type="text"
-                placeholder="Achat marchandises - Fournisseur X"
-                class="w-full text-sm border border-border rounded-lg px-3 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-              />
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div class="space-y-1.5">
-                <label class="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-                  >Débit (FCFA)</label
-                >
-                <input
-                  v-model.number="form.debit"
-                  type="number"
-                  min="0"
-                  class="w-full text-sm border border-border rounded-lg px-3 py-2 font-mono text-right bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                />
-              </div>
-              <div class="space-y-1.5">
-                <label class="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-                  >Crédit (FCFA)</label
-                >
-                <input
-                  v-model.number="form.credit"
-                  type="number"
-                  min="0"
-                  class="w-full text-sm border border-border rounded-lg px-3 py-2 font-mono text-right bg-background text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                />
-              </div>
-            </div>
-
-            <!-- Récap pièce -->
-            <div
-              v-if="lignesPiece.length"
-              class="bg-muted/50 rounded-xl border border-border overflow-hidden"
-            >
-              <div class="px-4 py-2.5 border-b border-border flex items-center justify-between">
-                <p class="text-xs font-semibold text-foreground uppercase tracking-wide">
-                  Pièce {{ form.numPiece }}
-                </p>
-                <span
-                  class="px-2 py-0.5 rounded-full font-semibold text-xs"
-                  :class="
-                    equilibre === 0
-                      ? 'text-emerald-700 bg-emerald-50 border border-emerald-200'
-                      : 'text-amber-700 bg-amber-50 border border-amber-200'
-                  "
-                >
-                  {{ equilibre === 0 ? '✓ Équilibrée' : `Écart: ${fmt(Math.abs(equilibre))}` }}
-                </span>
-              </div>
-              <div
-                v-for="l in lignesPiece"
-                :key="l.id"
-                class="px-4 py-2 flex items-center gap-3 text-xs border-b border-border last:border-0"
-              >
-                <span class="font-mono text-primary font-semibold w-16 shrink-0">{{
-                  l.numCompteGen
-                }}</span>
-                <span class="text-muted-foreground flex-1 truncate">{{ l.libelle }}</span>
-                <span v-if="l.debit" class="font-mono font-semibold text-foreground shrink-0">{{
-                  fmt(l.debit)
-                }}</span>
-                <span v-if="l.credit" class="font-mono text-muted-foreground shrink-0">{{
-                  fmt(l.credit)
-                }}</span>
-              </div>
-            </div>
-
-            <div class="flex flex-col-reverse sm:flex-row gap-2 pt-1">
-              <button
-                @click="showSaisieModal = false"
-                class="w-full sm:w-auto text-sm text-muted-foreground border border-border rounded-lg px-4 py-2 hover:bg-muted hover:text-foreground transition-colors"
-              >
-                Fermer
-              </button>
-              <button
-                @click="saveLigne"
-                :disabled="!form.numCompteGen || !form.libelle"
-                class="w-full sm:flex-1 text-sm font-semibold bg-primary text-white rounded-lg px-6 py-2 hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M12 4v16m8-8H4"
-                  />
-                </svg>
-                Ajouter la ligne
-              </button>
-            </div>
           </div>
         </div>
       </div>

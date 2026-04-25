@@ -1,6 +1,6 @@
 Page:NewJournalAchat
 --- Autocomplet sur N°Compte général si n'existe pas afficher un btn d'ajout + un modal
---- Mettre total debit et credit en haut
+--- Mettre total debit et credit en haut : fait
 -- sur une ligne d'ecriture ajouter les bouton ajouter et supprimer une ligne, raccorcis btn enter
 
 Page:JournalAchat
