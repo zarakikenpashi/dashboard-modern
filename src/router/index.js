@@ -32,7 +32,11 @@ const router = createRouter({
           name: 'JournalAchat',
           component: () => import('@/modules/journaux/pages/JournalAchatPage.vue'),
         },
-
+        {
+          path: 'journaux/naw-achat',
+          name: 'NewJournalAchat',
+          component: () => import('@/modules/journaux/pages/NewJournalAchatPage.vue'),
+        },
         {
           path: 'journaux/vente',
           name: 'JournalVente',

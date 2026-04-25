@@ -1,0 +1,11 @@
+Page:NewJournalAchat
+--- Autocomplet sur N°Compte général si n'existe pas afficher un btn d'ajout + un modal
+--- Mettre total debit et credit en haut
+-- sur une ligne d'ecriture ajouter les bouton ajouter et supprimer une ligne, raccorcis btn enter
+
+Page:JournalAchat
+--- Modifier le bock des stats
+--- ajouter la pagination en haut (faire deux colonnes: recherches, pagination)
+
+GLOBAL:
+-- Faire mes composants: card, input, autocomplet, modal

@@ -42,29 +42,29 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────
-   PALETTE AXELOR — Indigo électrique #2a39ff + Sidebar #00095b
+   PALETTE AXELOR — Indigo électrique #3d5afe + Sidebar #1a1a2e
    Remplace l'orange-rouge oklch(0.577 0.245 27.325) d'origine
 ───────────────────────────────────────────────────────────────── */
 :root {
   --radius: 0.65rem;
 
   /* Fond général */
-  --background: #fff;
-  --foreground: #00095b;
+  --background: #f4f5f9;
+  --foreground: #1a1a2e;
 
   /* Cards / Popovers */
   --card: #ffffff;
-  --card-foreground: #00095b;
+  --card-foreground: #1a1a2e;
   --popover: #ffffff;
-  --popover-foreground: #00095b;
+  --popover-foreground: #1a1a2e;
 
   /* ── PRIMAIRE : Indigo Axelor ── */
-  --primary: #2a39ff;
+  --primary: #3d5afe;
   --primary-foreground: #ffffff;
 
   /* Secondaire */
   --secondary: #eef0f8;
-  --secondary-foreground: #00095b;
+  --secondary-foreground: #1a1a2e;
 
   /* Muted */
   --muted: #eef0f8;
@@ -72,7 +72,7 @@
 
   /* Accent */
   --accent: #eef0f8;
-  --accent-foreground: #00095b;
+  --accent-foreground: #1a1a2e;
 
   /* Destructive */
   --destructive: #e74c3c;
@@ -85,19 +85,62 @@
   /* Charts — dégradé indigo */
   --chart-1: #8c9eff;
   --chart-2: #5c76ff;
-  --chart-3: #2a39ff;
+  --chart-3: #3d5afe;
   --chart-4: #3451e0;
   --chart-5: #2a40b8;
 
   /* ── SIDEBAR : quasi-noir bleuté Axelor ── */
-  --sidebar: #00095b;
-  --sidebar-foreground: #fff;
-  --sidebar-primary: #2a39ff;
+  --sidebar: #1a1a2e;
+  --sidebar-foreground: #e8eaf0;
+  --sidebar-primary: #3d5afe;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #2a39ff;
-  --sidebar-accent-foreground: #fff;
+  --sidebar-accent: #252540;
+  --sidebar-accent-foreground: #e8eaf0;
   --sidebar-border: rgba(255, 255, 255, 0.08);
   --sidebar-ring: #7b91fe;
+}
+
+.dark {
+  --background: #1a1a2e;
+  --foreground: #e8eaf0;
+
+  --card: #252540;
+  --card-foreground: #e8eaf0;
+  --popover: #252540;
+  --popover-foreground: #e8eaf0;
+
+  --primary: #5c76ff;
+  --primary-foreground: #ffffff;
+
+  --secondary: #2e2e50;
+  --secondary-foreground: #e8eaf0;
+
+  --muted: #2e2e50;
+  --muted-foreground: #8892a4;
+
+  --accent: #2e2e50;
+  --accent-foreground: #e8eaf0;
+
+  --destructive: #ff6b6b;
+
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: rgba(61, 90, 254, 0.5);
+
+  --chart-1: #8c9eff;
+  --chart-2: #5c76ff;
+  --chart-3: #3d5afe;
+  --chart-4: #3451e0;
+  --chart-5: #2a40b8;
+
+  --sidebar: #131326;
+  --sidebar-foreground: #e8eaf0;
+  --sidebar-primary: #5c76ff;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1e1e3c;
+  --sidebar-accent-foreground: #e8eaf0;
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+  --sidebar-ring: rgba(92, 118, 255, 0.5);
 }
 
 @layer base {
@@ -106,8 +149,5 @@
   }
   body {
     @apply bg-background text-foreground;
-  }
-  button {
-    @apply cursor-pointer;
   }
 }

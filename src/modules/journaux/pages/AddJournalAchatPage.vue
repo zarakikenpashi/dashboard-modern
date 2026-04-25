@@ -1,0 +1,948 @@
+<script setup>
+import { ref, computed, reactive } from 'vue'
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const activeTab = ref('journal') // 'journal' | 'nouvelle'
+const searchQuery = ref('')
+const filterStatut = ref('all')
+const showModal = ref(false)
+const selectedEntry = ref(null)
+
+// Nouvelle écriture
+const form = reactive({
+  numPiece: '',
+  dateAchat: new Date().toISOString().split('T')[0],
+  dateEcheance: '',
+  fournisseur: '',
+  numFacture: '',
+  modePaiement: '',
+  categorie: '',
+  compteComptable: '',
+  statut: 'En attente',
+  tvaRate: 18,
+  notes: '',
+  lignes: [{ desc: '', qte: 1, pu: 0 }],
+})
+
+// ─── DATA ────────────────────────────────────────────────────────────────────
+const ecritures = ref([
+  {
+    id: 1,
+    numPiece: 'ACH-001',
+    dateAchat: '2026-04-01',
+    fournisseur: 'Acme Fournitures',
+    numFacture: 'F-2026-081',
+    categorie: 'Fournitures',
+    modePaiement: 'Virement',
+    ht: 85000,
+    tvaRate: 18,
+    statut: 'Payé',
+  },
+  {
+    id: 2,
+    numPiece: 'ACH-002',
+    dateAchat: '2026-04-03',
+    fournisseur: 'Tech Solutions CI',
+    numFacture: 'TS-00234',
+    categorie: 'Équipements',
+    modePaiement: 'Chèque',
+    ht: 420000,
+    tvaRate: 18,
+    statut: 'En attente',
+  },
+  {
+    id: 3,
+    numPiece: 'ACH-003',
+    dateAchat: '2026-04-07',
+    fournisseur: 'Global Matières',
+    numFacture: 'GM-5591',
+    categorie: 'Matières premières',
+    modePaiement: 'Espèces',
+    ht: 210000,
+    tvaRate: 18,
+    statut: 'Payé',
+  },
+  {
+    id: 4,
+    numPiece: 'ACH-004',
+    dateAchat: '2026-04-10',
+    fournisseur: 'ServicePro SARL',
+    numFacture: 'SP-0099',
+    categorie: 'Services',
+    modePaiement: 'Mobile Money',
+    ht: 55000,
+    tvaRate: 18,
+    statut: 'En attente',
+  },
+  {
+    id: 5,
+    numPiece: 'ACH-005',
+    dateAchat: '2026-04-12',
+    fournisseur: 'BureauMax',
+    numFacture: 'BM-4412',
+    categorie: 'Fournitures',
+    modePaiement: 'Virement',
+    ht: 32000,
+    tvaRate: 18,
+    statut: 'Annulé',
+  },
+  {
+    id: 6,
+    numPiece: 'ACH-006',
+    dateAchat: '2026-04-15',
+    fournisseur: 'Delta Logistique',
+    numFacture: 'DL-7700',
+    categorie: 'Services',
+    modePaiement: 'Chèque',
+    ht: 175000,
+    tvaRate: 18,
+    statut: 'Payé',
+  },
+  {
+    id: 7,
+    numPiece: 'ACH-007',
+    dateAchat: '2026-04-18',
+    fournisseur: 'Omega Marchandises',
+    numFacture: 'OM-0032',
+    categorie: 'Marchandises',
+    modePaiement: 'Crédit',
+    ht: 630000,
+    tvaRate: 18,
+    statut: 'En attente',
+  },
+])
+
+// ─── COMPUTED ────────────────────────────────────────────────────────────────
+const ttc = (e) => e.ht * (1 + e.tvaRate / 100)
+
+const stats = computed(() => {
+  const total = ecritures.value.reduce((s, e) => s + ttc(e), 0)
+  const enAttente = ecritures.value.filter((e) => e.statut === 'En attente').length
+  const payees = ecritures.value.filter((e) => e.statut === 'Payé').length
+  const mois = new Date().getMonth()
+  const ce_mois = ecritures.value.filter((e) => new Date(e.dateAchat).getMonth() === mois).length
+  return { total, enAttente, payees, ce_mois, count: ecritures.value.length }
+})
+
+const filteredEcritures = computed(() => {
+  return ecritures.value
+    .filter((e) => {
+      const q = searchQuery.value.toLowerCase()
+      const matchQ =
+        !q ||
+        e.fournisseur.toLowerCase().includes(q) ||
+        e.numPiece.toLowerCase().includes(q) ||
+        e.categorie.toLowerCase().includes(q)
+      const matchS = filterStatut.value === 'all' || e.statut === filterStatut.value
+      return matchQ && matchS
+    })
+    .sort((a, b) => new Date(b.dateAchat) - new Date(a.dateAchat))
+})
+
+const formHT = computed(() => form.lignes.reduce((s, l) => s + l.qte * l.pu, 0))
+const formTVA = computed(() => (formHT.value * form.tvaRate) / 100)
+const formTTC = computed(() => formHT.value + formTVA.value)
+
+// ─── METHODS ─────────────────────────────────────────────────────────────────
+function fmt(n) {
+  return new Intl.NumberFormat('fr-FR').format(Math.round(n)) + ' FCFA'
+}
+
+function fmtDate(d) {
+  return new Date(d).toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+function addLigne() {
+  form.lignes.push({ desc: '', qte: 1, pu: 0 })
+}
+
+function removeLigne(i) {
+  if (form.lignes.length > 1) form.lignes.splice(i, 1)
+}
+
+function genNumPiece() {
+  const n = String(ecritures.value.length + 1).padStart(3, '0')
+  return `ACH-${new Date().getFullYear()}-${n}`
+}
+
+function openNew() {
+  form.numPiece = genNumPiece()
+  form.dateAchat = new Date().toISOString().split('T')[0]
+  form.dateEcheance = ''
+  form.fournisseur = ''
+  form.numFacture = ''
+  form.modePaiement = ''
+  form.categorie = ''
+  form.compteComptable = ''
+  form.statut = 'En attente'
+  form.tvaRate = 18
+  form.notes = ''
+  form.lignes = [{ desc: '', qte: 1, pu: 0 }]
+  activeTab.value = 'nouvelle'
+}
+
+function saveForm() {
+  if (!form.fournisseur || !form.dateAchat || !form.numPiece) return
+  ecritures.value.unshift({
+    id: Date.now(),
+    numPiece: form.numPiece,
+    dateAchat: form.dateAchat,
+    fournisseur: form.fournisseur,
+    numFacture: form.numFacture,
+    categorie: form.categorie,
+    modePaiement: form.modePaiement,
+    ht: formHT.value,
+    tvaRate: form.tvaRate,
+    statut: form.statut,
+  })
+  activeTab.value = 'journal'
+}
+
+function openDetail(e) {
+  selectedEntry.value = e
+  showModal.value = true
+}
+
+function deleteEntry(id) {
+  if (confirm('Supprimer cette écriture ?')) {
+    ecritures.value = ecritures.value.filter((e) => e.id !== id)
+    showModal.value = false
+  }
+}
+
+function changeStatut(entry, statut) {
+  entry.statut = statut
+  showModal.value = false
+}
+
+const statutColor = {
+  Payé: 'text-emerald-600 bg-emerald-50',
+  'En attente': 'text-amber-600 bg-amber-50',
+  Annulé: 'text-red-500 bg-red-50',
+}
+const statutDot = {
+  Payé: 'bg-emerald-500',
+  'En attente': 'bg-amber-400',
+  Annulé: 'bg-red-400',
+}
+</script>
+
+<template>
+  <div class="p-6 space-y-6">
+    <!-- PAGE HEADER -->
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-xl font-semibold text-gray-900">Journal d'Achat</h1>
+        <p class="text-sm text-gray-400 mt-0.5">Suivi des achats et factures fournisseurs</p>
+      </div>
+      <button
+        @click="openNew"
+        class="flex items-center gap-2 bg-gray-900 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 4v16m8-8H4"
+          />
+        </svg>
+        Nouvelle écriture
+      </button>
+    </div>
+
+    <!-- STAT CARDS -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs text-gray-400 font-medium uppercase tracking-wide"
+            >Total Achats</span
+          >
+          <div class="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center">
+            <svg
+              class="w-4 h-4 text-gray-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+              />
+            </svg>
+          </div>
+        </div>
+        <p class="text-2xl font-semibold text-gray-900">{{ fmt(stats.total) }}</p>
+        <p class="text-xs text-gray-400 mt-1">{{ stats.count }} écritures</p>
+      </div>
+
+      <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs text-gray-400 font-medium uppercase tracking-wide">En attente</span>
+          <div class="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center">
+            <svg
+              class="w-4 h-4 text-amber-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </div>
+        </div>
+        <p class="text-2xl font-semibold text-gray-900">{{ stats.enAttente }}</p>
+        <p class="text-xs text-amber-500 mt-1 flex items-center gap-1">
+          <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+            <path
+              fill-rule="evenodd"
+              d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z"
+            />
+          </svg>
+          Factures à régler
+        </p>
+      </div>
+
+      <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs text-gray-400 font-medium uppercase tracking-wide">Payées</span>
+          <div class="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center">
+            <svg
+              class="w-4 h-4 text-emerald-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </div>
+        </div>
+        <p class="text-2xl font-semibold text-gray-900">{{ stats.payees }}</p>
+        <p class="text-xs text-emerald-500 mt-1">Factures soldées</p>
+      </div>
+
+      <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs text-gray-400 font-medium uppercase tracking-wide">Ce mois</span>
+          <div class="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
+            <svg
+              class="w-4 h-4 text-blue-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
+          </div>
+        </div>
+        <p class="text-2xl font-semibold text-gray-900">{{ stats.ce_mois }}</p>
+        <p class="text-xs text-gray-400 mt-1">Nouvelles écritures</p>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+      <div class="flex border-b border-gray-100 px-6">
+        <button
+          v-for="tab in [
+            { key: 'journal', label: 'Journal des achats' },
+            { key: 'nouvelle', label: 'Nouvelle écriture' },
+          ]"
+          :key="tab.key"
+          @click="activeTab = tab.key"
+          class="py-4 px-1 mr-6 text-sm font-medium border-b-2 transition-colors"
+          :class="
+            activeTab === tab.key
+              ? 'border-gray-900 text-gray-900'
+              : 'border-transparent text-gray-400 hover:text-gray-600'
+          "
+        >
+          {{ tab.label }}
+        </button>
+      </div>
+
+      <!-- ── TAB JOURNAL ─────────────────────────────────────────────────── -->
+      <div v-if="activeTab === 'journal'" class="p-6">
+        <!-- Toolbar -->
+        <div class="flex flex-col sm:flex-row gap-3 mb-5">
+          <div class="relative flex-1 max-w-sm">
+            <svg
+              class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+            <input
+              v-model="searchQuery"
+              type="text"
+              placeholder="Rechercher fournisseur, N° pièce..."
+              class="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 bg-gray-50"
+            />
+          </div>
+          <select
+            v-model="filterStatut"
+            class="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 text-gray-700"
+          >
+            <option value="all">Tous les statuts</option>
+            <option value="Payé">Payé</option>
+            <option value="En attente">En attente</option>
+            <option value="Annulé">Annulé</option>
+          </select>
+          <button
+            class="flex items-center gap-2 text-sm text-gray-500 border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+              />
+            </svg>
+            Exporter
+          </button>
+        </div>
+
+        <!-- Table -->
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="border-b border-gray-100">
+                <th
+                  class="text-left text-xs font-medium text-gray-400 uppercase tracking-wide pb-3 pr-4"
+                >
+                  N° Pièce
+                </th>
+                <th
+                  class="text-left text-xs font-medium text-gray-400 uppercase tracking-wide pb-3 pr-4"
+                >
+                  Fournisseur
+                </th>
+                <th
+                  class="text-left text-xs font-medium text-gray-400 uppercase tracking-wide pb-3 pr-4"
+                >
+                  Catégorie
+                </th>
+                <th
+                  class="text-right text-xs font-medium text-gray-400 uppercase tracking-wide pb-3 pr-4"
+                >
+                  Montant HT
+                </th>
+                <th
+                  class="text-right text-xs font-medium text-gray-400 uppercase tracking-wide pb-3 pr-4"
+                >
+                  Total TTC
+                </th>
+                <th
+                  class="text-left text-xs font-medium text-gray-400 uppercase tracking-wide pb-3 pr-4"
+                >
+                  Statut
+                </th>
+                <th
+                  class="text-left text-xs font-medium text-gray-400 uppercase tracking-wide pb-3"
+                >
+                  Date
+                </th>
+                <th class="pb-3"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="entry in filteredEcritures"
+                :key="entry.id"
+                @click="openDetail(entry)"
+                class="border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors group"
+              >
+                <td class="py-3.5 pr-4">
+                  <span class="text-sm font-semibold text-gray-800">{{ entry.numPiece }}</span>
+                </td>
+                <td class="py-3.5 pr-4">
+                  <span class="text-sm text-gray-700">{{ entry.fournisseur }}</span>
+                  <p v-if="entry.numFacture" class="text-xs text-gray-400">
+                    {{ entry.numFacture }}
+                  </p>
+                </td>
+                <td class="py-3.5 pr-4">
+                  <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-md">{{
+                    entry.categorie || '—'
+                  }}</span>
+                </td>
+                <td class="py-3.5 pr-4 text-right">
+                  <span class="text-sm text-gray-600">{{ fmt(entry.ht) }}</span>
+                </td>
+                <td class="py-3.5 pr-4 text-right">
+                  <span class="text-sm font-semibold text-gray-900">{{ fmt(ttc(entry)) }}</span>
+                </td>
+                <td class="py-3.5 pr-4">
+                  <span
+                    class="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full"
+                    :class="statutColor[entry.statut]"
+                  >
+                    <span class="w-1.5 h-1.5 rounded-full" :class="statutDot[entry.statut]"></span>
+                    {{ entry.statut }}
+                  </span>
+                </td>
+                <td class="py-3.5 text-sm text-gray-500">{{ fmtDate(entry.dateAchat) }}</td>
+                <td class="py-3.5 pl-2">
+                  <button
+                    class="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-gray-200 transition-all"
+                    @click.stop="openDetail(entry)"
+                  >
+                    <svg
+                      class="w-4 h-4 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </button>
+                </td>
+              </tr>
+
+              <tr v-if="!filteredEcritures.length">
+                <td colspan="8" class="text-center py-16 text-gray-400 text-sm">
+                  <svg
+                    class="w-10 h-10 mx-auto mb-3 text-gray-200"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="1.5"
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  Aucune écriture trouvée
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+          <p class="text-xs text-gray-400">
+            {{ filteredEcritures.length }} écriture(s) affichée(s)
+          </p>
+          <div class="text-xs text-gray-400">
+            Total TTC affiché :
+            <span class="font-semibold text-gray-700">{{
+              fmt(filteredEcritures.reduce((s, e) => s + ttc(e), 0))
+            }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB NOUVELLE ÉCRITURE ───────────────────────────────────────── -->
+      <div v-if="activeTab === 'nouvelle'" class="p-6 space-y-6">
+        <!-- Section 1 -->
+        <div>
+          <h3 class="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+            <span
+              class="w-5 h-5 rounded-full bg-gray-900 text-white text-xs flex items-center justify-center font-bold"
+              >1</span
+            >
+            Informations générales
+          </h3>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="space-y-1.5">
+              <label class="text-xs font-medium text-gray-500"
+                >N° Pièce <span class="text-red-400">*</span></label
+              >
+              <input
+                v-model="form.numPiece"
+                type="text"
+                class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 bg-gray-50"
+                placeholder="ACH-2026-001"
+              />
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-xs font-medium text-gray-500"
+                >Date d'achat <span class="text-red-400">*</span></label
+              >
+              <input
+                v-model="form.dateAchat"
+                type="date"
+                class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 bg-gray-50"
+              />
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-xs font-medium text-gray-500">Date d'échéance</label>
+              <input
+                v-model="form.dateEcheance"
+                type="date"
+                class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 bg-gray-50"
+              />
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-xs font-medium text-gray-500">Statut</label>
+              <select
+                v-model="form.statut"
+                class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 bg-gray-50"
+              >
+                <option>En attente</option>
+                <option>Payé</option>
+                <option>Annulé</option>
+              </select>
+            </div>
+            <div class="space-y-1.5 col-span-2">
+              <label class="text-xs font-medium text-gray-500"
+                >Fournisseur <span class="text-red-400">*</span></label
+              >
+              <input
+                v-model="form.fournisseur"
+                type="text"
+                class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 bg-gray-50"
+                placeholder="Nom ou raison sociale"
+              />
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-xs font-medium text-gray-500">N° Facture fournisseur</label>
+              <input
+                v-model="form.numFacture"
+                type="text"
+                class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 bg-gray-50"
+                placeholder="REF-XXXX"
+              />
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-xs font-medium text-gray-500">Mode de paiement</label>
+              <select
+                v-model="form.modePaiement"
+                class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 bg-gray-50"
+              >
+                <option value="">— Sélectionner —</option>
+                <option>Espèces</option>
+                <option>Virement bancaire</option>
+                <option>Chèque</option>
+                <option>Mobile Money</option>
+                <option>Crédit</option>
+              </select>
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-xs font-medium text-gray-500">Catégorie</label>
+              <select
+                v-model="form.categorie"
+                class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 bg-gray-50"
+              >
+                <option value="">— Sélectionner —</option>
+                <option>Marchandises</option>
+                <option>Matières premières</option>
+                <option>Fournitures</option>
+                <option>Services</option>
+                <option>Équipements</option>
+                <option>Autres</option>
+              </select>
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-xs font-medium text-gray-500">Compte comptable</label>
+              <select
+                v-model="form.compteComptable"
+                class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 bg-gray-50"
+              >
+                <option value="">— Sélectionner —</option>
+                <option value="401">401 — Fournisseurs</option>
+                <option value="601">601 — Achats marchandises</option>
+                <option value="602">602 — Achats matières premières</option>
+                <option value="605">605 — Achats fournitures</option>
+                <option value="606">606 — Petit matériel</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="border-t border-gray-100"></div>
+
+        <!-- Section 2 – Lignes -->
+        <div>
+          <h3 class="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+            <span
+              class="w-5 h-5 rounded-full bg-gray-900 text-white text-xs flex items-center justify-center font-bold"
+              >2</span
+            >
+            Lignes d'achat
+          </h3>
+
+          <div class="space-y-2 mb-3">
+            <div class="grid grid-cols-12 gap-3 px-3 mb-1">
+              <span class="col-span-6 text-xs font-medium text-gray-400 uppercase tracking-wide"
+                >Désignation</span
+              >
+              <span class="col-span-2 text-xs font-medium text-gray-400 uppercase tracking-wide"
+                >Quantité</span
+              >
+              <span class="col-span-3 text-xs font-medium text-gray-400 uppercase tracking-wide"
+                >Prix unitaire</span
+              >
+            </div>
+
+            <div
+              v-for="(ligne, i) in form.lignes"
+              :key="i"
+              class="grid grid-cols-12 gap-3 items-center bg-gray-50 border border-gray-100 rounded-lg px-3 py-2.5"
+            >
+              <input
+                v-model="ligne.desc"
+                type="text"
+                class="col-span-6 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-900/10 bg-white"
+                placeholder="Description article / service"
+              />
+              <input
+                v-model.number="ligne.qte"
+                type="number"
+                min="0"
+                class="col-span-2 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-900/10 bg-white text-right"
+                placeholder="1"
+              />
+              <input
+                v-model.number="ligne.pu"
+                type="number"
+                min="0"
+                class="col-span-3 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-900/10 bg-white text-right"
+                placeholder="0"
+              />
+              <button
+                @click="removeLigne(i)"
+                class="col-span-1 w-7 h-7 flex items-center justify-center rounded-full hover:bg-red-100 text-gray-300 hover:text-red-400 transition-colors mx-auto"
+                :disabled="form.lignes.length === 1"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <button
+            @click="addLigne"
+            class="text-sm text-gray-500 border border-dashed border-gray-300 rounded-lg px-4 py-2.5 w-full hover:bg-gray-50 hover:border-gray-400 hover:text-gray-700 transition-colors flex items-center justify-center gap-2"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+            Ajouter une ligne
+          </button>
+        </div>
+
+        <!-- Totaux -->
+        <div class="flex justify-end">
+          <div class="w-72 space-y-2 bg-gray-50 border border-gray-100 rounded-xl p-4">
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-500">Sous-total HT</span>
+              <span class="font-medium text-gray-700">{{ fmt(formHT) }}</span>
+            </div>
+            <div class="flex justify-between items-center text-sm">
+              <span class="text-gray-500">TVA</span>
+              <div class="flex items-center gap-2">
+                <input
+                  v-model.number="form.tvaRate"
+                  type="number"
+                  min="0"
+                  max="100"
+                  class="w-14 text-right text-sm border border-gray-200 rounded px-2 py-1 bg-white focus:outline-none"
+                />
+                <span class="text-gray-400 text-xs">% → {{ fmt(formTVA) }}</span>
+              </div>
+            </div>
+            <div class="border-t border-gray-200 pt-2 flex justify-between">
+              <span class="text-sm font-semibold text-gray-700">Total TTC</span>
+              <span class="text-base font-bold text-gray-900">{{ fmt(formTTC) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="border-t border-gray-100"></div>
+
+        <!-- Notes -->
+        <div>
+          <h3 class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+            <span
+              class="w-5 h-5 rounded-full bg-gray-900 text-white text-xs flex items-center justify-center font-bold"
+              >3</span
+            >
+            Notes
+          </h3>
+          <textarea
+            v-model="form.notes"
+            rows="3"
+            class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 bg-gray-50 resize-none"
+            placeholder="Conditions de livraison, remarques particulières..."
+          />
+        </div>
+
+        <!-- Actions -->
+        <div class="flex justify-end gap-3 pt-2">
+          <button
+            @click="activeTab = 'journal'"
+            class="text-sm text-gray-500 border border-gray-200 rounded-lg px-4 py-2 hover:bg-gray-50 transition-colors"
+          >
+            Annuler
+          </button>
+          <button
+            @click="saveForm"
+            :disabled="!form.fournisseur || !form.numPiece"
+            class="text-sm font-medium bg-gray-900 text-white rounded-lg px-6 py-2 hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Enregistrer l'écriture
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MODAL DETAIL ─────────────────────────────────────────────────────── -->
+  <Teleport to="body">
+    <Transition
+      enter-active-class="transition duration-200 ease-out"
+      enter-from-class="opacity-0"
+      enter-to-class="opacity-100"
+      leave-active-class="transition duration-150 ease-in"
+      leave-from-class="opacity-100"
+      leave-to-class="opacity-0"
+    >
+      <div
+        v-if="showModal && selectedEntry"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm"
+        @click.self="showModal = false"
+      >
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-5">
+          <div class="flex items-start justify-between">
+            <div>
+              <h2 class="text-lg font-semibold text-gray-900">{{ selectedEntry.numPiece }}</h2>
+              <p class="text-sm text-gray-400">{{ selectedEntry.fournisseur }}</p>
+            </div>
+            <button
+              @click="showModal = false"
+              class="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+
+          <div class="space-y-3">
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-400">Date d'achat</span>
+              <span class="font-medium text-gray-700">{{ fmtDate(selectedEntry.dateAchat) }}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-400">N° Facture</span>
+              <span class="font-medium text-gray-700">{{ selectedEntry.numFacture || '—' }}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-400">Catégorie</span>
+              <span class="font-medium text-gray-700">{{ selectedEntry.categorie || '—' }}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-400">Mode de paiement</span>
+              <span class="font-medium text-gray-700">{{ selectedEntry.modePaiement || '—' }}</span>
+            </div>
+            <div class="border-t border-gray-100 pt-3 space-y-2">
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-400">Montant HT</span>
+                <span class="text-gray-700">{{ fmt(selectedEntry.ht) }}</span>
+              </div>
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-400">TVA ({{ selectedEntry.tvaRate }}%)</span>
+                <span class="text-gray-700">{{
+                  fmt((selectedEntry.ht * selectedEntry.tvaRate) / 100)
+                }}</span>
+              </div>
+              <div class="flex justify-between font-semibold">
+                <span class="text-gray-700">Total TTC</span>
+                <span class="text-gray-900">{{ fmt(ttc(selectedEntry)) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Changer statut -->
+          <div class="border-t border-gray-100 pt-4">
+            <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
+              Changer le statut
+            </p>
+            <div class="flex gap-2">
+              <button
+                v-for="s in ['Payé', 'En attente', 'Annulé']"
+                :key="s"
+                @click="changeStatut(selectedEntry, s)"
+                class="flex-1 text-xs font-medium py-1.5 rounded-lg border transition-colors"
+                :class="
+                  selectedEntry.statut === s
+                    ? 'bg-gray-900 text-white border-gray-900'
+                    : 'text-gray-500 border-gray-200 hover:bg-gray-50'
+                "
+              >
+                {{ s }}
+              </button>
+            </div>
+          </div>
+
+          <button
+            @click="deleteEntry(selectedEntry.id)"
+            class="w-full text-sm text-red-400 border border-red-100 rounded-lg py-2 hover:bg-red-50 transition-colors flex items-center justify-center gap-2"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              />
+            </svg>
+            Supprimer cette écriture
+          </button>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
+</template>
