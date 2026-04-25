@@ -182,7 +182,6 @@ const goToPage = () => router.push({ name: 'JournalAchat' })
         </button>
       </div>
     </div>
-
     <!-- ── BASIC INFORMATION ───────────────────────────────────────── -->
     <div class="bg-card rounded-xl border border-border overflow-hidden">
       <!-- Header accordion -->
@@ -234,31 +233,6 @@ const goToPage = () => router.push({ name: 'JournalAchat' })
               class="w-full px-3 py-2 text-sm font-mono bg-background border border-border rounded-lg text-foreground placeholder-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
             />
           </div>
-          <!-- Statut
-          <div class="space-y-1.5">
-            <label class="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Statut
-            </label>
-            <div class="relative">
-              <select
-                v-model="form.statut"
-                class="w-full appearance-none px-3 py-2 pr-8 text-sm
-                       bg-background border border-border rounded-lg
-                       text-foreground
-                       focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary
-                       transition-colors cursor-pointer"
-              >
-                <option>En attente</option>
-                <option>Payé</option>
-                <option>Annulé</option>
-              </select>
-              <svg class="w-3.5 h-3.5 text-muted-foreground absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 9l6 6 6-6"/>
-              </svg>
-            </div>
-          </div>
-          -->
         </div>
       </div>
     </div>
@@ -270,6 +244,72 @@ const goToPage = () => router.push({ name: 'JournalAchat' })
         class="flex items-center justify-between px-5 py-3.5 border-b border-border bg-muted/30 flex-wrap gap-2"
       >
         <h2 class="text-sm font-semibold text-foreground">Lignes d'écriture</h2>
+        <!-- ── TOTAUX ───────────────────────────────────────── -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <!-- Total Crédit -->
+          <div class="space-y-1 flex items-center gap-1.5">
+            <label class="text-xs font-semibold uppercase tracking-wide text-foreground">
+              Total Crédit:
+            </label>
+            <div class="px-2 py-1 text-sm font-mono font-semibold text-muted-foreground text-right">
+              {{ fmt(totalCredit) }}
+            </div>
+          </div>
+          <!-- Total Débit -->
+          <div class="space-y-1 flex items-center gap-1.5">
+            <label class="text-xs font-semibold uppercase tracking-wide text-foreground">
+              Total Débit:
+            </label>
+            <div class="px-2 py-1 text-sm font-mono font-semibold text-muted-foreground text-right">
+              {{ fmt(totalDebit) }}
+            </div>
+          </div>
+          <div
+            v-if="totalDebit > 0 || totalCredit > 0"
+            class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium border transition-colors"
+            :class="
+              isBalanced
+                ? 'bg-green-50 text-green-700 border-green-200'
+                : 'bg-amber-50 text-amber-700 border-amber-200'
+            "
+          >
+            <svg
+              v-if="isBalanced"
+              class="w-3.5 h-3.5 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2.5"
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+            <svg
+              v-else
+              class="w-3.5 h-3.5 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span v-if="isBalanced">Écriture équilibrée ✓</span>
+            <span v-else>
+              Écart :
+              <strong class="font-mono">
+                {{ fmt(Math.abs(totalDebit - totalCredit)) }}
+              </strong>
+            </span>
+          </div>
+        </div>
         <div class="flex items-center gap-3">
           <button
             @click="addRow"
@@ -374,16 +414,6 @@ const goToPage = () => router.push({ name: 'JournalAchat' })
                     <option>Payé</option>
                     <option>Annulé</option>
                   </select>
-
-                  <!-- <select
-                    v-model="entry.numCompte"
-                    class="w-full appearance-none px-2 py-1.5 pr-7 text-xs font-mono bg-background border border-border rounded-md text-primary font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors cursor-pointer"
-                  >
-                    <option value="" disabled>— Compte —</option>
-                    <option v-for="acc in accounts" :key="acc.code" :value="acc.code">
-                      {{ acc.code }}
-                    </option>
-                  </select> -->
                   <svg
                     class="w-3 h-3 text-muted-foreground absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none"
                     fill="none"
@@ -583,99 +613,6 @@ const goToPage = () => router.push({ name: 'JournalAchat' })
           </svg>
           Ajouter une ligne
         </button>
-      </div>
-
-      <!-- ── TOTAUX ─────────────────────────────────────────────── -->
-      <div class="px-5 pb-5 flex justify-end">
-        <div class="w-full sm:w-72 space-y-3">
-          <!-- Total Débit -->
-          <div class="space-y-1">
-            <div class="flex items-center gap-1.5">
-              <label class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Total Débit
-              </label>
-              <!-- Tooltip info -->
-              <div
-                class="w-4 h-4 rounded-full bg-muted flex items-center justify-center cursor-help"
-                title="Somme de toutes les lignes Débit"
-              >
-                <span class="text-muted-foreground text-[10px] font-bold leading-none">i</span>
-              </div>
-            </div>
-            <div
-              class="px-3 py-2.5 bg-muted/50 border border-border rounded-lg text-sm font-mono font-semibold text-foreground text-right"
-            >
-              {{ fmt(totalDebit) }}
-            </div>
-          </div>
-
-          <!-- Total Crédit -->
-          <div class="space-y-1">
-            <div class="flex items-center gap-1.5">
-              <label class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Total Crédit
-              </label>
-              <div
-                class="w-4 h-4 rounded-full bg-muted flex items-center justify-center cursor-help"
-                title="Somme de toutes les lignes Crédit"
-              >
-                <span class="text-muted-foreground text-[10px] font-bold leading-none">i</span>
-              </div>
-            </div>
-            <div
-              class="px-3 py-2.5 bg-muted/50 border border-border rounded-lg text-sm font-mono font-semibold text-muted-foreground text-right"
-            >
-              {{ fmt(totalCredit) }}
-            </div>
-          </div>
-
-          <!-- Indicateur équilibre -->
-          <div
-            v-if="totalDebit > 0 || totalCredit > 0"
-            class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium border transition-colors"
-            :class="
-              isBalanced
-                ? 'bg-green-50 text-green-700 border-green-200'
-                : 'bg-amber-50 text-amber-700 border-amber-200'
-            "
-          >
-            <svg
-              v-if="isBalanced"
-              class="w-3.5 h-3.5 shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2.5"
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-            <svg
-              v-else
-              class="w-3.5 h-3.5 shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <span v-if="isBalanced">Écriture équilibrée ✓</span>
-            <span v-else>
-              Écart :
-              <strong class="font-mono">
-                {{ fmt(Math.abs(totalDebit - totalCredit)) }}
-              </strong>
-            </span>
-          </div>
-        </div>
       </div>
     </div>
 
