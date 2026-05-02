@@ -1,6 +1,7 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { ref, computed } from 'vue'
+import ComboboxBase from '@/components/ui/ComboboxBase.vue'
 
 const router = useRouter()
 
@@ -107,28 +108,25 @@ const allSelected = computed({
 })
 const someSelected = computed(() => journalEntries.value.some((e) => e.selected))
 
-const goToPage = () => router.push({ name: 'JournalAchat' })
+const goToPage = () => router.push({ name: 'JournalVente' })
+
+const framework = ref(null)
+
+const frameworks = [
+  { value: 'nuxt', label: 'Nuxt.js' },
+  { value: 'vue', label: 'Vue Router' },
+  { value: 'vite', label: 'Vite' },
+]
 </script>
 
 <template>
-  <!--
-    ┌─────────────────────────────────────────────────────────────────────┐
-    │  Design system Axelor                                               │
-    │  • bg-background  #f4f5f9   fond page                              │
-    │  • bg-card        #ffffff   cartes                                 │
-    │  • --primary      #3d5afe   bouton principal, focus, liens         │
-    │  • border-border  #e4e7ef   bordures                               │
-    │  • text-foreground #1a1a2e  texte principal                        │
-    │  • text-muted-foreground #5f6b7c  texte secondaire                │
-    └─────────────────────────────────────────────────────────────────────┘
-  -->
   <div class="p-4 sm:p-6 space-y-5">
     <!-- ── PAGE HEADER ────────────────────────────────────────────── -->
     <div class="flex items-center justify-between gap-3 flex-wrap">
       <div class="min-w-0">
-        <h1 class="text-xl font-semibold text-foreground truncate">Saisie — Journal Achats</h1>
+        <h1 class="text-xl font-semibold text-foreground truncate">Saisie — Journal Ventes</h1>
         <p class="text-sm text-muted-foreground mt-0.5 hidden sm:block">
-          Journal : ACHATS LOCAUX / {{ form.numPiece }}
+          Journal : VENTES / {{ form.numPiece }}
         </p>
       </div>
 
@@ -245,7 +243,7 @@ const goToPage = () => router.push({ name: 'JournalAchat' })
       >
         <h2 class="text-sm font-semibold text-foreground">Lignes d'écriture</h2>
         <!-- ── TOTAUX ───────────────────────────────────────── -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="hidden lg:grid grid-cols-1 sm:grid-cols-3 gap-4">
           <!-- Total Crédit -->
           <div class="space-y-1 flex items-center gap-1.5">
             <label class="text-xs font-semibold uppercase tracking-wide text-foreground">
@@ -343,8 +341,7 @@ const goToPage = () => router.push({ name: 'JournalAchat' })
         </div>
       </div>
 
-      <!-- TABLE desktop -->
-      <div class="hidden md:block overflow-x-auto">
+      <div class="block overflow-auto" id="journal-table-wrapper">
         <table class="w-full text-sm">
           <thead>
             <tr class="bg-muted/40 border-b border-border">
@@ -460,11 +457,12 @@ const goToPage = () => router.push({ name: 'JournalAchat' })
 
               <!-- N° Compte Tiers -->
               <td class="px-3 py-2.5">
-                <input
-                  v-model="entry.numCompteTiers"
-                  type="text"
-                  placeholder="401XXX"
-                  class="w-full px-2 py-1.5 text-xs font-mono bg-background border border-border rounded-md text-muted-foreground placeholder-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+                <ComboboxBase
+                  scroll-container="#journal-table-wrapper"
+                  v-model="framework"
+                  :items="frameworks"
+                  placeholder="Sélectionner un framework…"
+                  width="100%"
                 />
               </td>
 
@@ -525,79 +523,6 @@ const goToPage = () => router.push({ name: 'JournalAchat' })
         </table>
       </div>
 
-      <!-- CARTES mobile -->
-      <div class="md:hidden divide-y divide-border">
-        <div
-          v-for="entry in journalEntries"
-          :key="entry.id"
-          class="px-4 py-4 space-y-3"
-          :class="entry.selected ? 'bg-primary/5' : ''"
-        >
-          <div class="flex items-center justify-between gap-2">
-            <div class="flex items-center gap-2">
-              <input
-                type="checkbox"
-                v-model="entry.selected"
-                class="w-4 h-4 rounded border-border accent-primary"
-              />
-              <span class="text-xs font-mono font-semibold text-primary">{{
-                entry.numCompte || '—'
-              }}</span>
-              <span
-                v-if="entry.numCompteTiers"
-                class="text-xs font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded"
-              >
-                {{ entry.numCompteTiers }}
-              </span>
-            </div>
-            <button
-              @click="journalEntries.splice(journalEntries.indexOf(entry), 1)"
-              class="w-6 h-6 flex items-center justify-center rounded text-muted-foreground hover:text-destructive"
-            >
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
-          <input
-            v-model="entry.libelle"
-            type="text"
-            placeholder="Libellé"
-            class="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-          />
-          <div class="grid grid-cols-2 gap-2">
-            <div class="space-y-1">
-              <label class="text-xs text-muted-foreground font-medium">Débit</label>
-              <input
-                v-model="entry.debit"
-                @input="onDebitInput(entry)"
-                type="number"
-                placeholder="0"
-                class="w-full px-3 py-2 text-sm font-mono text-right bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:bg-muted disabled:cursor-not-allowed"
-                :disabled="!!entry.credit"
-              />
-            </div>
-            <div class="space-y-1">
-              <label class="text-xs text-muted-foreground font-medium">Crédit</label>
-              <input
-                v-model="entry.credit"
-                @input="onCreditInput(entry)"
-                type="number"
-                placeholder="0"
-                class="w-full px-3 py-2 text-sm font-mono text-right bg-background border border-border rounded-lg text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:bg-muted disabled:cursor-not-allowed"
-                :disabled="!!entry.debit"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Bouton Ajouter (bas table) -->
       <div class="px-5 py-3 border-t border-border">
         <button
           @click="addRow"

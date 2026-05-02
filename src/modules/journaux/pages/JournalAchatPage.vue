@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -8,7 +8,6 @@ const router = useRouter()
 const searchQuery = ref('')
 const filterStatut = ref('all')
 const periodeLabel = ref('Janvier 2026')
-const ancienSolde = ref(0)
 
 // Pagination
 const pageSize = ref(8)
@@ -21,19 +20,6 @@ const showDeleteModal = ref(false)
 
 const selectedEntry = ref(null)
 const entryToDelete = ref(null)
-
-// Formulaire nouvelle écriture
-const form = reactive({
-  jour: new Date().getDate(),
-  numPiece: '',
-  numFacture: '',
-  numCompteGen: '',
-  numCompteTiers: '',
-  libelle: '',
-  debit: '',
-  credit: '',
-  statut: 'En attente',
-})
 
 // Formulaire édition
 const editForm = reactive({
@@ -197,16 +183,11 @@ const ecritures = ref([
   },
 ])
 
-// ─── COMPUTED — STATS ─────────────────────────────────────────────────────────
-const totalDebit = computed(() => ecritures.value.reduce((s, e) => s + e.debit, 0))
-const totalCredit = computed(() => ecritures.value.reduce((s, e) => s + e.credit, 0))
-const nouveauSolde = computed(() => ancienSolde.value + totalDebit.value - totalCredit.value)
-
 const stats = computed(() => {
   const pieces = [...new Set(ecritures.value.map((e) => e.numPiece))]
   const ttc = ecritures.value.filter((e) => e.debit > 0).reduce((s, e) => s + e.debit, 0)
   const mois = new Date().getMonth()
-  const ceMois = ecritures.value.filter((e) => new Date().getMonth() === mois).length
+  const ceMois = ecritures.value.filter(() => new Date().getMonth() === mois).length
   return {
     totalAchats: ttc,
     nbPieces: pieces.length,
@@ -219,9 +200,7 @@ const stats = computed(() => {
   }
 })
 
-// ─── COMPUTED — FILTRE + PAGINATION ──────────────────────────────────────────
 const filteredEcritures = computed(() => {
-  currentPage.value = 1 // reset on filter change
   return ecritures.value.filter((e) => {
     const q = searchQuery.value.toLowerCase()
     const matchQ =
@@ -272,9 +251,7 @@ function fmt(n) {
   if (!n || n === 0) return '—'
   return new Intl.NumberFormat('fr-FR').format(Math.round(n))
 }
-function fmtFull(n) {
-  return new Intl.NumberFormat('fr-FR').format(Math.round(n)) + ' FCFA'
-}
+
 function goToPage() {
   router.push({ name: 'NewJournalAchat' })
 }
@@ -327,27 +304,6 @@ function confirmDelete() {
   showDeleteModal.value = false
 }
 
-function saveLigne() {
-  if (!form.numCompteGen || !form.libelle) return
-  ecritures.value.push({
-    id: Date.now(),
-    jour: Number(form.jour),
-    numPiece: form.numPiece,
-    numFacture: form.numFacture,
-    numCompteGen: form.numCompteGen,
-    numCompteTiers: form.numCompteTiers,
-    libelle: form.libelle,
-    debit: Number(form.debit) || 0,
-    credit: Number(form.credit) || 0,
-    statut: form.statut,
-  })
-  form.numCompteGen = ''
-  form.numCompteTiers = ''
-  form.libelle = ''
-  form.debit = ''
-  form.credit = ''
-}
-
 function changeStatut(entry, statut) {
   const piece = entry.numPiece
   ecritures.value.forEach((e) => {
@@ -367,6 +323,10 @@ const statutDot = {
   'En attente': 'bg-amber-400',
   Annulé: 'bg-red-400',
 }
+
+watch([searchQuery, filterStatut], () => {
+  currentPage.value = 1
+})
 </script>
 
 <template>

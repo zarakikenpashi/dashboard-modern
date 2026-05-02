@@ -20,13 +20,22 @@ const router = createRouter({
           name: 'JournalBanque',
           component: () => import('@/modules/journaux/pages/JournalBanquePage.vue'),
         },
+        {
+          path: 'journaux/naw-banque',
+          name: 'NewJournalBanque',
+          component: () => import('@/modules/journaux/pages/NewJournalBQPage.vue'),
+        },
 
         {
           path: 'journaux/caisse',
           name: 'JournalCaisse',
           component: () => import('@/modules/journaux/pages/JournalCaissePage.vue'),
         },
-
+        {
+          path: 'journaux/naw-caisse',
+          name: 'NewJournalCaisse',
+          component: () => import('@/modules/journaux/pages/NewJournalCAPage.vue'),
+        },
         {
           path: 'journaux/achat',
           name: 'JournalAchat',
@@ -35,20 +44,28 @@ const router = createRouter({
         {
           path: 'journaux/naw-achat',
           name: 'NewJournalAchat',
-          component: () => import('@/modules/journaux/pages/NewJournalAchatPage.vue'),
+          component: () => import('@/modules/journaux/pages/NewJournalACPage.vue'),
         },
         {
           path: 'journaux/vente',
           name: 'JournalVente',
           component: () => import('@/modules/journaux/pages/JournalVentePage.vue'),
         },
-
+        {
+          path: 'journaux/naw-vente',
+          name: 'NewJournalVente',
+          component: () => import('@/modules/journaux/pages/NewJournalVTPage.vue'),
+        },
         {
           path: 'journaux/od',
           name: 'JournalOD',
           component: () => import('@/modules/journaux/pages/JournalODPage.vue'),
         },
-
+        {
+          path: 'journaux/naw-operations-diverses',
+          name: 'NewJournalOperationsDiverses',
+          component: () => import('@/modules/journaux/pages/NewJournalODPage.vue'),
+        },
         {
           path: 'journaux/ran',
           name: 'JournalRAN',

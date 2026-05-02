@@ -4,8 +4,9 @@ Page:NewJournalAchat
 -- sur une ligne d'ecriture ajouter les bouton ajouter et supprimer une ligne, raccorcis btn enter
 
 Page:JournalAchat
---- Modifier le bock des stats
---- ajouter la pagination en haut (faire deux colonnes: recherches, pagination)
+--- Modifier le bock des stats: fait
+--- ajouter la pagination en haut (faire deux colonnes: recherches, pagination) : fait
 
 GLOBAL:
--- Faire mes composants: card, input, autocomplet, modal
+-- Faire mes composants: card, Inputs, Select, Checkbox, autocomplet, modal,boutons, date, drag and drop image avec previsualisation, 
+pour les autocomplet

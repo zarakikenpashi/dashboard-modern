@@ -41,55 +41,41 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
-/* ─────────────────────────────────────────────────────────────────
-   PALETTE AXELOR — Indigo électrique #2a39ff + Sidebar #00095b
-   Remplace l'orange-rouge oklch(0.577 0.245 27.325) d'origine
-───────────────────────────────────────────────────────────────── */
 :root {
   --radius: 0.65rem;
 
-  /* Fond général */
   --background: #fff;
   --foreground: #00095b;
 
-  /* Cards / Popovers */
   --card: #ffffff;
   --card-foreground: #00095b;
   --popover: #ffffff;
   --popover-foreground: #00095b;
 
-  /* ── PRIMAIRE : Indigo Axelor ── */
   --primary: #2a39ff;
   --primary-foreground: #ffffff;
 
-  /* Secondaire */
   --secondary: #eef0f8;
   --secondary-foreground: #00095b;
 
-  /* Muted */
   --muted: #eef0f8;
   --muted-foreground: #5f6b7c;
 
-  /* Accent */
   --accent: #eef0f8;
   --accent-foreground: #00095b;
 
-  /* Destructive */
   --destructive: #e74c3c;
 
-  /* Borders / Inputs */
   --border: #e4e7ef;
   --input: #e4e7ef;
   --ring: #7b91fe;
 
-  /* Charts — dégradé indigo */
   --chart-1: #8c9eff;
   --chart-2: #5c76ff;
   --chart-3: #2a39ff;
   --chart-4: #3451e0;
   --chart-5: #2a40b8;
 
-  /* ── SIDEBAR : quasi-noir bleuté Axelor ── */
   --sidebar: #00095b;
   --sidebar-foreground: #fff;
   --sidebar-primary: #2a39ff;
